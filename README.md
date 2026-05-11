@@ -5,19 +5,21 @@
 ## 📋 Features
 
 > [!NOTE]
-> NjordMenu contains highly advanced network manipulation tools. , forced bans, and global network manipulation are exceptionally powerful. Please use them responsibly and refer to the Disclaimer below.
+> NjordMenu contains highly advanced network manipulation tools. Forced bans, and global network manipulation are exceptionally powerful. Please use them responsibly and refer to the Disclaimer below.
 
 * **Extensive ESP & Visuals:** See ghosts, reveal player roles (even in meetings), view player info (Platform, Level, FriendCode), and enable Tracers or Full Bright.
 * **Account Spoofer:** Spoof your Name, Level, Platform (Epic, Steam, Xbox, Starlight, etc.), and bypass Chat Filters.
 * **Advanced Movement:** True NoClip, SpeedHack, Teleport to Cursor, Magnet Cursor, and Inverted Controls.
 * **Role Buffs:** Infinite kill reach, kill anyone, endless Shapeshift/Battery/Vent time, and zero cooldowns.
 * **Lobby & Host Controls:** Force pre-game roles (without black screens), Smart End Game, unlimited settings, and Spawn/Despawn maps or lobbies on the fly.
+* **Legal Meeting:** Safely force a meeting in public lobbies without triggering anti-cheat kicks by simulating a legitimate body report or emergency button press.
+* **Advanced Auto-Host System:** Fully automate your lobbies! Includes automatic return to the lobby after matches, customizable minimum player counts to begin countdowns, fast-start overrides for full lobbies, load-wait protections (waits for all players to fully load in), and last-minute force starts to keep your lobby alive indefinitely.
+* **Anti-Cheat & Ban List:** Maintain a persistent, local blacklist (`NjordMenuBanList.txt`). Add specific FriendCodes to automatically ban and kick malicious players or rule-breakers the exact moment they join your lobby.
 * **Trolling & Fun:**  Rainbow Colors, custom Chat Commands (`/color`, `/w`), and fake animations.
 * **UI Customization:** Fully modular GUI with RGB mode, custom image backgrounds (`MenuBG.png`), and smooth animations.
 <img width="1277" height="717" alt="Снимок экрана 2026-04-24 233814" src="https://github.com/user-attachments/assets/83996161-7953-4294-a876-a2c36522527d" />
 
-
-## 🛡️RPC Sniffer
+## 🛡️ RPC Sniffer
 
 NjordMenu comes with an advanced detection system:
 

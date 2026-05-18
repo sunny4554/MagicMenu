@@ -1,6 +1,6 @@
 # 🌊 NjordMenu — Advanced Among Us Mod Menu
 
-**NjordMenu** is a multi-functional [BepInEx](https://github.com/BepInEx/BepInEx) mod menu for Among Us, developed by **Meowchelo**. Built with the intention of providing ultimate control over your game, it features deep quality-of-life improvements, extensive host privileges, and hilarious trolling utilities.
+**NjordMenu** is a multi-functional [BepInEx](https://github.com/BepInEx/BepInEx) mod menu for Among Us, developed by **Meowchelo**. Built with the intention of providing ultimate control over your game, it features deep quality-of-life improvements, extensive host privileges, advanced anti-cheat protections, and hilarious trolling utilities.
 
 ---
 
@@ -8,57 +8,86 @@
 
 | Version | Description | Download |
 | :--- | :--- | :--- |
-| **v1.2.5** ✨ | Latest update (New UI, Force Eject, TP to Player) | [📥 Download dll](https://github.com/meowchelo/NjordMenu/releases/latest) |
-| **v1.2.4** | Previous stable build | [📥 Download dll](https://github.com/meowchelo/NjordMenu/releases/tag/v1.2.4) |
-| **v1.2.3** | Legacy build | [📥 Download dll](https://github.com/meowchelo/NjordMenu/releases/tag/v1.2.3) |
+| **v1.2.5** ✨ | Latest update (Force Eject, TP to Player, New Chat & Sniffer UI) | [📥 Download .dll](https://github.com/meowchelo/NjordMenu/releases/latest) |
+| **v1.2.4** | Previous stable build | [📥 Download .dll](https://github.com/meowchelo/NjordMenu/releases/tag/v1.2.4) |
+| **v1.2.3** | Legacy build | [📥 Download .dll](https://github.com/meowchelo/NjordMenu/releases/tag/v1.2.3) |
 
 ---
 
-## 📋 Features
+## 📋 Comprehensive Feature List
 
 > [!NOTE]  
 > NjordMenu contains highly advanced network manipulation tools. Forced bans and global network manipulation are exceptionally powerful. Please use them responsibly.
 
+### 🛡️ Anti-Cheat & Third-Party Client Detection
+NjordMenu acts as a powerful shield against malicious players, crashers, and other modders:
+* **Advanced RPC Radar (Sniffer):** The menu silently analyzes all incoming network traffic. Vanilla Among Us only uses RPC IDs `0-65`. If a player sends non-vanilla packets, NjordMenu cross-references the ID with a massive built-in database of known third-party cheats (including *RockStar, Hydra, Sicko, HostGuard, Polar, GNC, KillNetwork, BanMod, Eclipse, and more*). You will receive an instant on-screen notification identifying exactly who is cheating and what menu they are using.
+* **Menu Identity Spoofer:** Want to hide your NjordMenu from other modders? You can spoof your outgoing RPCs to mimic *other* cheat clients, tricking their radars into thinking you are using something else.
+* **Pet Spam Shield:** Detects malicious packet spam (e.g., 160+ packets per second). Locally drops the packets to prevent lag, and automatically bans the attacker if you are the host.
+* **Anti Vote-Kick:** Completely disable the lobby vote-kick system, preventing trolls from kicking you out of your own lobby.
+* **Fortegreen Auto-Kick:** Automatically detects and kicks bugged/glitched "Fortegreen" (Color ID 18) players that cause lobby crashes.
+* **Persistent Ban List:** Maintain a local blacklist (`NjordMenuBanList.txt`). Add griefers by their FriendCode or PUID, and the mod will kick them the exact millisecond they try to join.
+<img width="1423" height="939" alt="Снимок экрана 2026-05-18 225635" src="https://github.com/user-attachments/assets/aff8a2ee-6dcf-4fbe-a38a-47f4bbd08adf" />
+
+### 💬 Ultimate Chat System
+Experience the best chat enhancements available:
+* **Bypass Restrictions:** Increase the character limit to 120, enable Fast Chat (removes the anti-spam cooldown), and allow links, emails, and special symbols.
+* **QoL Integrations:** Native clipboard support (`Ctrl+C` / `Ctrl+V`) and Chat History navigation using the `Up` and `Down` arrow keys.
+* **Always Show Chat & Ghost Chat:** Keep the chat window permanently visible and read what dead players (ghosts) are saying while you are still alive.
+* **Local Chat Logging:** Automatically saves all lobby and in-game chat to a local `ChatLog.txt` file.
+* **Commands & Whispers:** Use `/w [name] [message]` or `/pm` to send private messages that only the target player can see. Change your color on the fly using `/color [name/ID]`.
+* **Host Filters:** Block exploit chats like Rainbow text or Fortegreen names globally.
+
 ### 👑 Host & Lobby Controls
 * **Force Eject:** Instantly throw any player into space without a meeting or sirens! *(Host only)*
-* **Pre-Game Roles:** Force specific roles for yourself or others before the game even starts.
+* **Pre-Game Role Manager:** Force specific roles (Impostor, Shapeshifter, Phantom, Engineer, Tracker, etc.) for yourself or others before the game even starts.
 * **Advanced Auto-Host:** Fully automate your lobbies! Auto-return after matches, custom minimum player counts, fast-start overrides, and load-wait protections.
-* **Map & Lobby Spawner:** Spawn or despawn maps and lobbies on the fly.
-* **Smart End Game:** Instantly end the game with custom win conditions.
+* **No Setting Limits:** Completely uncap game options (e.g., set unlimited Impostors, extreme speeds).
+* **Extended Lobby:** Expands the public lobby finder UI to show up to 15 slots and displays extra metadata (Host Platform, Lobby Age, True Host Name).
+<img width="1919" height="1079" alt="Снимок экрана 2026-05-18 225327" src="https://github.com/user-attachments/assets/8373b7c4-a0d2-4762-bf02-38263ad04636" />
 
-### 🏃 Movement & ESP
-* **Player Teleportation:** Instantly teleport directly to any selected player (`TP TO`).
-* **Advanced Cursor Controls:** Teleport to Cursor, Magnet Cursor (Auto-Follow), and True NoClip.
-* **Extensive Visuals:** See ghosts, reveal player roles (even during meetings), view player info (Platform, Level, FC), and enable Tracers or Full Bright.
+### 🔧 Sabotage & Door Control
+* **Global Control:** Trigger all critical sabotages (Reactor, O2, Comms, Lights) at once, or instantly fix all of them with a single click.
+* **Door Management:** Close or open all doors on the map globally, or manipulate specific room doors (e.g., Cafeteria, Storage) directly from the menu.
 
-### 🎭 Trolling & Utilities
-* **Account Spoofer:** Spoof your Name, Level, Platform (Epic, Steam, Xbox, etc.), and bypass chat filters.
-* **Role Buffs:** Infinite kill reach, kill anyone, endless Shapeshift/Battery/Vent time, and zero cooldowns.
-* **Legal Meeting:** Safely force a meeting in public lobbies without triggering anti-cheat kicks.
-* **Chat Tools:** Rainbow Colors, custom Chat Commands (`/color`, `/w`), and a built-in Chat Logger.
+### 🎭 Role Enhancements & Modifiers
+* **Impostor Buffs:** Infinite kill reach, kill anyone (even other Impostors), and no kill cooldowns.
+* **Shapeshifter:** Endless shapeshift duration and the ability to skip the morphing animation.
+* **Crewmate Buffs:** Engineer (endless vent time, no cooldown), Scientist (endless battery, no vitals cooldown), Tracker (endless tracking), and Detective (unlimited interrogate range).
 
-### 🛡️ Anti-Cheat & RPC Sniffer
-* **RPC Radar:** NjordMenu silently analyzes all incoming network traffic. If a player uses a hidden cheat feature (from mods like *GNC, HostGuard, Polar, KillNetwork*), you will instantly receive an on-screen notification identifying the exact mod they are using.
-* **Ban List:** Maintain a persistent, local blacklist (`NjordMenuBanList.txt`). Banned players are automatically kicked the exact moment they join your lobby.
+### 👁️ Visuals & ESP
+* **Extensive ESP:** See ghosts, reveal player roles, and view player info (Platform, Level, FC) attached to their nameplate.
+* **Reveal Votes:** Watch exactly who votes for whom in real-time during meetings.
+* **Vision Hacks:** See players hiding inside vents and toggle Full Bright to remove all map shadows.
+* **Camera Controls:** Detach your camera using Freecam (WASD) or zoom out using the mouse scroll wheel.
+<img width="1806" height="918" alt="изображение" src="https://github.com/user-attachments/assets/69735f5d-31db-462e-abdb-de2dcce11f6a" />
 
 ---
 
-## 🪟 Windows Installation
+## ⚙️ Installation Guide
 
-Download the latest `NjordMenu` zip pack from the [Releases](#-releases) table above.
-* For **Steam** or **Itch.io**: Download `NjordMenu-v1.2.5-Steam-Itch.zip`.
-* For **Microsoft Store, Epic Games, or Xbox**: Download `NjordMenu-v1.2.5-MS-Epic-Xbox.zip`.
+Because NjordMenu is a BepInEx plugin, **you must install the BepInEx IL2CPP library first**. 
 
-**Follow these steps:**
-1. Open the `.zip` file you have just downloaded and **copy all its contents**.
-2. **Paste** these files directly into your Among Us game folder:
-   * 💨 **Steam:** Right-click Among Us in your Library → Click `Manage` → Click `Browse local files`.
-   * 🎮 **Epic Launcher:** Right-click Among Us in your Library → Click `Manage` → Click the `folder icon` in the Installation box.
-   * 👾 **Itch.io:** Open the Itch.io app → Right-click Among Us in your Library → Click `Manage` → Click `Open folder in Explorer`.
-   * 🪟 **Microsoft Store:** Open the folder where Windows apps are installed (typically `C:\Program Files\WindowsApps\`) → Search for `Among Us.exe` → Right-click the result → Select `Open file location`.
-   * 🟢 **Xbox App:** Right-click Among Us in your Library → Click `Manage` → Open the `FILES` tab → Click `BROWSE...` → Open the `Among Us` folder → Open the `Content` folder.
-3. Launch Among Us as you normally would. You should see a console window appear, installing the mod's requirements.
-4. Wait for the console window to finish the installation. After that, Among Us will automatically open with NjordMenu successfully installed!
+### Step 1: Install BepInEx IL2CPP
+1. Download **BepInEx IL2CPP** from its [official repository](https://github.com/BepInEx/BepInEx). 
+   * *Note: Usually, you need the **x86** version for Steam, and the **x64** version for Epic Games or Microsoft Store.*
+2. Extract the contents of the BepInEx `.zip` file directly into your Among Us game folder (where `Among Us.exe` is located).
+3. **Run the game once.** This is crucial! It allows BepInEx to unpack and generate its required `plugins` folder. Once you reach the main menu, close the game.
+
+### Step 2: Install NjordMenu
+1. Download `NjordMenu.dll` from the [Releases](#-releases) table above.
+2. Navigate to your Among Us game folder, open the `BepInEx` folder, and then open the `plugins` folder.
+3. Paste `NjordMenu.dll` into the `plugins` folder.
+4. Launch Among Us! 
+
+*(The first launch might take slightly longer as BepInEx hooks into the game).*
+
+### 📁 How to find your Among Us game folder:
+* 💨 **Steam:** Right-click Among Us in your Library → `Manage` → `Browse local files`.
+* 🎮 **Epic Launcher:** Right-click Among Us in your Library → `Manage` → Click the `folder icon`.
+* 👾 **Itch.io:** Open the Itch.io app → Right-click Among Us → `Manage` → `Open folder in Explorer`.
+* 🪟 **Microsoft Store:** Open the folder where Windows apps are installed (typically `C:\Program Files\WindowsApps\`) → Search for `Among Us.exe` → Right-click the result → Select `Open file location`.
+* 🟢 **Xbox App:** Right-click Among Us in your Library → `Manage` → `FILES` tab → `BROWSE...` → `Among Us` → `Content`.
 
 > 💡 **Tip:** By default, you can toggle the cheat GUI on and off by pressing the **`INSERT`** (or `Right Shift`) key on your keyboard. Custom backgrounds can be applied by placing a `MenuBG.png` inside the `BepInEx/config` folder.
 

@@ -35,7 +35,7 @@ using Vector3 = UnityEngine.Vector3;
 using System.Runtime.CompilerServices;
 namespace ElysiumModMenu
 {
-    [BepInPlugin("com.elysiummodmenu.menu", "ElysiumModMenu", "1.3.0")]
+    [BepInPlugin("com.elysiummodmenu.menu", "ElysiumModMenu", "1.3.1")]
     public class Plugin : BasePlugin
     {
         public static Plugin Instance { get; private set; } = null!;
@@ -3682,7 +3682,7 @@ namespace ElysiumModMenu
             string contributorHex = ColorUtility.ToHtmlStringRGB(whiteMenuTheme ? GetThemeAccentColor(new Color32(109, 138, 255, 255)) : new Color32(109, 138, 255, 255));
             string dangerHex = ColorUtility.ToHtmlStringRGB(whiteMenuTheme ? GetThemeAccentColor(new Color32(231, 76, 60, 255)) : new Color32(231, 76, 60, 255));
             string safeHex = ColorUtility.ToHtmlStringRGB(whiteMenuTheme ? GetThemeAccentColor(new Color32(57, 255, 20, 255)) : new Color32(57, 255, 20, 255));
-            string versionText = "1.3.0";
+            string versionText = "1.3.1";
 
             GUIStyle textStyle = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true, fontSize = 12 };
             textStyle.normal.textColor = whiteMenuTheme ? new Color(0.16f, 0.16f, 0.16f, 1f) : new Color(0.85f, 0.85f, 0.85f, 1f);
@@ -7395,7 +7395,7 @@ namespace ElysiumModMenu
 
                     if (ElysiumModMenuGUI.showWatermark)
                     {
-                        string shimmerTitle = ElysiumModMenuGUI.ApplyMenuShimmer("ElysiumModMenu v1.3.0");
+                        string shimmerTitle = ElysiumModMenuGUI.ApplyMenuShimmer("ElysiumModMenu v1.3.1");
                         finalString = $"{shimmerTitle} • " + finalString;
                     }
 

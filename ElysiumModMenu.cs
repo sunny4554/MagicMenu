@@ -35,7 +35,7 @@ using Vector3 = UnityEngine.Vector3;
 using System.Runtime.CompilerServices;
 namespace ElysiumModMenu
 {
-    [BepInPlugin("com.elysiummodmenu.menu", "ElysiumModMenu", "1.3.0")]
+    [BepInPlugin("com.elysiummodmenu.menu", "ElysiumModMenu", "1.3.1")]
     public class Plugin : BasePlugin
     {
         public static Plugin Instance { get; private set; } = null!;
@@ -54,6 +54,7 @@ namespace ElysiumModMenu
         public static ConfigEntry<bool> RgbMenuModeConfig;
         public static ConfigEntry<bool> UnlockCosmeticsConfig;
         public static ConfigEntry<bool> MoreLobbyInfoConfig;
+        public static ConfigEntry<bool> EnableChatDarkModeConfig;
 
         public override void Load()
         {
@@ -85,6 +86,7 @@ namespace ElysiumModMenu
             RgbMenuModeConfig = MenuConfig.Bind("ElysiumModMenu.GUI", "RgbMenuMode", false, "");
             UnlockCosmeticsConfig = MenuConfig.Bind("ElysiumModMenu.General", "UnlockCosmetics", true, "");
             MoreLobbyInfoConfig = MenuConfig.Bind("ElysiumModMenu.Visuals", "MoreLobbyInfo", true, "");
+            EnableChatDarkModeConfig = MenuConfig.Bind("ElysiumModMenu.Chat", "EnableChatDarkMode", true, "Turns the custom dark chat input and bubble colors on/off.");
 
             ClassInjector.RegisterTypeInIl2Cpp<ElysiumModMenuGUI>();
 
@@ -703,6 +705,13 @@ namespace ElysiumModMenu
             enableClipboard = DrawToggle(enableClipboard, L("Clipboard (Ctrl+C/V)", "Буфер обмена (Ctrl+C/V)"), 280);
             GUILayout.Space(2);
             enableChatLog = DrawToggle(enableChatLog, L("Save Chat Log to File", "Сохранять лог чата в файл"), 280);
+            GUILayout.Space(2);
+            enableChatDarkMode = DrawToggle(enableChatDarkMode, L("Dark Chat Theme", "Темная тема чата"), 280);
+            if (enableChatDarkMode && GUILayout.Button(L("Turn Off Dark Chat", "Выключить темный чат"), btnStyle, GUILayout.Width(180), GUILayout.Height(24)))
+            {
+                enableChatDarkMode = false;
+                SaveConfig();
+            }
 
             GUILayout.Space(8);
 
@@ -2314,6 +2323,7 @@ namespace ElysiumModMenu
         public static bool seeKillCooldown = false;
         public static bool extendedLobby = false;
         public static bool DarkModeEnabled = true;
+        public static bool enableChatDarkMode = true;
         public static float customLightRadius = 5f;
         private static Dictionary<byte, float> lastKillTimestamps = new Dictionary<byte, float>();
 
@@ -2836,6 +2846,16 @@ namespace ElysiumModMenu
         public static bool showWatermark = true;
         public static bool whiteMenuTheme = false;
 
+        private static void SaveBool(string key, bool value)
+        {
+            PlayerPrefs.SetInt(key, value ? 1 : 0);
+        }
+
+        private static bool LoadBool(string key, bool defaultValue)
+        {
+            return PlayerPrefs.HasKey(key) ? PlayerPrefs.GetInt(key) == 1 : defaultValue;
+        }
+
         private void SaveConfig()
         {
             try
@@ -2850,11 +2870,13 @@ namespace ElysiumModMenu
                 Plugin.ShowWatermarkConfig.Value = showWatermark;
                 Plugin.UnlockCosmeticsConfig.Value = unlockCosmetics;
                 Plugin.MoreLobbyInfoConfig.Value = moreLobbyInfo;
+                Plugin.EnableChatDarkModeConfig.Value = enableChatDarkMode;
                 Plugin.RpcSpoofDelayConfig.Value = rpcSpoofDelay;
                 Plugin.MenuColorIndexConfig.Value = currentMenuColorIndex;
                 Plugin.RgbMenuModeConfig.Value = rgbMenuMode;
-                PlayerPrefs.SetInt("M_WhiteTheme", whiteMenuTheme ? 1 : 0);
-                PlayerPrefs.SetInt("M_MenuToggleKey", (int)menuToggleKey);
+                Plugin.MenuKeybind.Value = KeyCode.Insert;
+                menuToggleKey = KeyCode.Insert;
+                SaveBool("M_WhiteTheme", whiteMenuTheme);
                 PlayerPrefs.SetInt("M_BndMMorph", (int)bindMassMorph);
                 PlayerPrefs.SetInt("M_BndSpawn", (int)bindSpawnLobby);
                 PlayerPrefs.SetInt("M_BndDespawn", (int)bindDespawnLobby);
@@ -2864,15 +2886,65 @@ namespace ElysiumModMenu
                 PlayerPrefs.SetInt("M_BndEndImp", (int)bindEndImp);
                 PlayerPrefs.SetInt("M_BndEndImpDC", (int)bindEndImpDC);
                 PlayerPrefs.SetInt("M_BndEndHnsDC", (int)bindEndHnsDC);
-                PlayerPrefs.SetInt("M_AutoKickBugs", autoKickBugs ? 1 : 0);
+                SaveBool("M_AutoKickBugs", autoKickBugs);
                 PlayerPrefs.SetFloat("M_AutoKickTimer", autoKickTimer);
-                PlayerPrefs.SetInt("M_DisableVoteKicks", disableVoteKicks ? 1 : 0);
-                PlayerPrefs.SetInt("M_LocalNameSpoof", enableLocalNameSpoof ? 1 : 0);
-                PlayerPrefs.SetInt("M_LocalFakeFCEnabled", enableLocalFriendCodeSpoof ? 1 : 0);
+                SaveBool("M_DisableVoteKicks", disableVoteKicks);
+                SaveBool("M_LocalNameSpoof", enableLocalNameSpoof);
+                SaveBool("M_LocalFakeFCEnabled", enableLocalFriendCodeSpoof);
                 PlayerPrefs.SetString("M_LocalFakeFC", localFriendCodeInput);
 
-                if (keyBinds.ContainsKey("Toggle Menu"))
-                    Plugin.MenuKeybind.Value = keyBinds["Toggle Menu"];
+                SaveBool("M_ShowPlayerInfo", showPlayerInfo);
+                SaveBool("M_SeeGhosts", seeGhosts);
+                SaveBool("M_SeeRoles", seeRoles);
+                SaveBool("M_RevealMeetingRoles", revealMeetingRoles);
+                SaveBool("M_ShowTracers", showTracers);
+                SaveBool("M_FullBright", fullBright);
+                SaveBool("M_SeeProtections", seeProtections);
+                SaveBool("M_SeeKillCooldown", seeKillCooldown);
+                SaveBool("M_ExtendedLobby", extendedLobby);
+                SaveBool("M_MoreLobbyInfo", moreLobbyInfo);
+                SaveBool("M_AlwaysChat", alwaysChat);
+                SaveBool("M_ReadGhostChat", readGhostChat);
+                SaveBool("M_EnableExtendedChat", enableExtendedChat);
+                SaveBool("M_EnableFastChat", enableFastChat);
+                SaveBool("M_AllowLinksAndSymbols", allowLinksAndSymbols);
+                SaveBool("M_EnableChatHistory", enableChatHistory);
+                SaveBool("M_EnableClipboard", enableClipboard);
+                SaveBool("M_EnableChatLog", enableChatLog);
+                SaveBool("M_EnableColorCommand", enableColorCommand);
+                SaveBool("M_BlockRainbowChat", blockRainbowChat);
+                SaveBool("M_BlockFortegreenChat", blockFortegreenChat);
+                SaveBool("M_SpoofMenuEnabled", SpoofMenuEnabled);
+                SaveBool("M_NoClip", noClip);
+                SaveBool("M_TpToCursor", tpToCursor);
+                SaveBool("M_DragToCursor", dragToCursor);
+                SaveBool("M_AutoFollowCursor", autoFollowCursor);
+                SaveBool("M_Freecam", freecam);
+                SaveBool("M_CameraZoom", cameraZoom);
+                SaveBool("M_RevealVotes", RevealVotesEnabled);
+                SaveBool("M_NoTaskMode", noTaskMode);
+                SaveBool("M_NeverEndGame", neverEndGame);
+                SaveBool("M_RemovePenalty", removePenalty);
+                SaveBool("M_AlwaysShowLobbyTimer", alwaysShowLobbyTimer);
+                SaveBool("M_AutoBanEnabled", autoBanEnabled);
+                SaveBool("M_BlockSpoofRPC", blockSpoofRPC);
+                SaveBool("M_BlockSabotageRPC", blockSabotageRPC);
+                SaveBool("M_BlockGameRpcInLobby", blockGameRpcInLobby);
+                SaveBool("M_BlockChatFloodRpc", blockChatFloodRpc);
+                SaveBool("M_BlockMeetingFloodRpc", blockMeetingFloodRpc);
+                SaveBool("M_AutoHostEnabled", AutoHostEnabled);
+                SaveBool("M_AutoReturnLobbyAfterMatch", AutoReturnLobbyAfterMatch);
+                SaveBool("M_AutoHostNotifications", AutoHostNotifications);
+                SaveBool("M_AutoHostForceLastMinute", AutoHostForceLastMinute);
+                SaveBool("M_AutoHostWaitLoadedPlayers", AutoHostWaitLoadedPlayers);
+                SaveBool("M_AutoHostCancelBelowMin", AutoHostCancelBelowMin);
+                SaveBool("M_AutoHostInstantStart", AutoHostInstantStart);
+                PlayerPrefs.SetInt("M_AutoHostMinPlayers", AutoHostMinPlayers);
+                PlayerPrefs.SetFloat("M_AutoHostStartDelaySeconds", AutoHostStartDelaySeconds);
+                PlayerPrefs.SetInt("M_AutoHostFastStartPlayers", AutoHostFastStartPlayers);
+                PlayerPrefs.SetFloat("M_AutoHostFastStartDelaySeconds", AutoHostFastStartDelaySeconds);
+                PlayerPrefs.SetFloat("M_WalkSpeed", walkSpeed);
+                PlayerPrefs.SetFloat("M_EngineSpeed", engineSpeed);
 
                 Plugin.MenuConfig.Save();
 
@@ -2947,18 +3019,19 @@ namespace ElysiumModMenu
                 showWatermark = Plugin.ShowWatermarkConfig.Value;
                 unlockCosmetics = Plugin.UnlockCosmeticsConfig.Value;
                 moreLobbyInfo = Plugin.MoreLobbyInfoConfig.Value;
+                enableChatDarkMode = Plugin.EnableChatDarkModeConfig.Value;
                 rpcSpoofDelay = Plugin.RpcSpoofDelayConfig.Value;
                 currentMenuColorIndex = Plugin.MenuColorIndexConfig.Value;
                 rgbMenuMode = Plugin.RgbMenuModeConfig.Value;
-                whiteMenuTheme = PlayerPrefs.GetInt("M_WhiteTheme", 0) == 1;
-                if (PlayerPrefs.HasKey("M_AutoKickBugs")) autoKickBugs = PlayerPrefs.GetInt("M_AutoKickBugs") == 1;
+                whiteMenuTheme = LoadBool("M_WhiteTheme", whiteMenuTheme);
+                autoKickBugs = LoadBool("M_AutoKickBugs", autoKickBugs);
                 if (PlayerPrefs.HasKey("M_AutoKickTimer")) autoKickTimer = PlayerPrefs.GetFloat("M_AutoKickTimer");
-                if (PlayerPrefs.HasKey("M_DisableVoteKicks")) disableVoteKicks = PlayerPrefs.GetInt("M_DisableVoteKicks") == 1;
-                if (PlayerPrefs.HasKey("M_LocalNameSpoof")) enableLocalNameSpoof = PlayerPrefs.GetInt("M_LocalNameSpoof") == 1;
-                if (PlayerPrefs.HasKey("M_LocalFakeFCEnabled")) enableLocalFriendCodeSpoof = PlayerPrefs.GetInt("M_LocalFakeFCEnabled") == 1;
+                disableVoteKicks = LoadBool("M_DisableVoteKicks", disableVoteKicks);
+                enableLocalNameSpoof = LoadBool("M_LocalNameSpoof", enableLocalNameSpoof);
+                enableLocalFriendCodeSpoof = LoadBool("M_LocalFakeFCEnabled", enableLocalFriendCodeSpoof);
                 if (PlayerPrefs.HasKey("M_LocalFakeFC")) localFriendCodeInput = PlayerPrefs.GetString("M_LocalFakeFC");
                 if (PlayerPrefs.HasKey("M_BndMagnet")) bindMagnetCursor = (KeyCode)PlayerPrefs.GetInt("M_BndMagnet");
-                if (PlayerPrefs.HasKey("M_MenuToggleKey")) menuToggleKey = (KeyCode)PlayerPrefs.GetInt("M_MenuToggleKey");
+                menuToggleKey = KeyCode.Insert;
                 if (PlayerPrefs.HasKey("M_BndMMorph")) bindMassMorph = (KeyCode)PlayerPrefs.GetInt("M_BndMMorph");
                 if (PlayerPrefs.HasKey("M_BndSpawn")) bindSpawnLobby = (KeyCode)PlayerPrefs.GetInt("M_BndSpawn");
                 if (PlayerPrefs.HasKey("M_BndDespawn")) bindDespawnLobby = (KeyCode)PlayerPrefs.GetInt("M_BndDespawn");
@@ -2974,7 +3047,59 @@ namespace ElysiumModMenu
                     currentAccentColor = menuColors[currentMenuColorIndex];
                 }
 
-                keyBinds["Toggle Menu"] = Plugin.MenuKeybind.Value;
+                showPlayerInfo = LoadBool("M_ShowPlayerInfo", showPlayerInfo);
+                seeGhosts = LoadBool("M_SeeGhosts", seeGhosts);
+                seeRoles = LoadBool("M_SeeRoles", seeRoles);
+                revealMeetingRoles = LoadBool("M_RevealMeetingRoles", revealMeetingRoles);
+                showTracers = LoadBool("M_ShowTracers", showTracers);
+                fullBright = LoadBool("M_FullBright", fullBright);
+                seeProtections = LoadBool("M_SeeProtections", seeProtections);
+                seeKillCooldown = LoadBool("M_SeeKillCooldown", seeKillCooldown);
+                extendedLobby = LoadBool("M_ExtendedLobby", extendedLobby);
+                moreLobbyInfo = LoadBool("M_MoreLobbyInfo", moreLobbyInfo);
+                alwaysChat = LoadBool("M_AlwaysChat", alwaysChat);
+                readGhostChat = LoadBool("M_ReadGhostChat", readGhostChat);
+                enableExtendedChat = LoadBool("M_EnableExtendedChat", enableExtendedChat);
+                enableFastChat = LoadBool("M_EnableFastChat", enableFastChat);
+                allowLinksAndSymbols = LoadBool("M_AllowLinksAndSymbols", allowLinksAndSymbols);
+                enableChatHistory = LoadBool("M_EnableChatHistory", enableChatHistory);
+                enableClipboard = LoadBool("M_EnableClipboard", enableClipboard);
+                enableChatLog = LoadBool("M_EnableChatLog", enableChatLog);
+                enableColorCommand = LoadBool("M_EnableColorCommand", enableColorCommand);
+                blockRainbowChat = LoadBool("M_BlockRainbowChat", blockRainbowChat);
+                blockFortegreenChat = LoadBool("M_BlockFortegreenChat", blockFortegreenChat);
+                SpoofMenuEnabled = LoadBool("M_SpoofMenuEnabled", SpoofMenuEnabled);
+                noClip = LoadBool("M_NoClip", noClip);
+                tpToCursor = LoadBool("M_TpToCursor", tpToCursor);
+                dragToCursor = LoadBool("M_DragToCursor", dragToCursor);
+                autoFollowCursor = LoadBool("M_AutoFollowCursor", autoFollowCursor);
+                freecam = LoadBool("M_Freecam", freecam);
+                cameraZoom = LoadBool("M_CameraZoom", cameraZoom);
+                RevealVotesEnabled = LoadBool("M_RevealVotes", RevealVotesEnabled);
+                noTaskMode = LoadBool("M_NoTaskMode", noTaskMode);
+                neverEndGame = LoadBool("M_NeverEndGame", neverEndGame);
+                removePenalty = LoadBool("M_RemovePenalty", removePenalty);
+                alwaysShowLobbyTimer = LoadBool("M_AlwaysShowLobbyTimer", alwaysShowLobbyTimer);
+                autoBanEnabled = LoadBool("M_AutoBanEnabled", autoBanEnabled);
+                blockSpoofRPC = LoadBool("M_BlockSpoofRPC", blockSpoofRPC);
+                blockSabotageRPC = LoadBool("M_BlockSabotageRPC", blockSabotageRPC);
+                blockGameRpcInLobby = LoadBool("M_BlockGameRpcInLobby", blockGameRpcInLobby);
+                blockChatFloodRpc = LoadBool("M_BlockChatFloodRpc", blockChatFloodRpc);
+                blockMeetingFloodRpc = LoadBool("M_BlockMeetingFloodRpc", blockMeetingFloodRpc);
+                AutoHostEnabled = LoadBool("M_AutoHostEnabled", AutoHostEnabled);
+                AutoReturnLobbyAfterMatch = LoadBool("M_AutoReturnLobbyAfterMatch", AutoReturnLobbyAfterMatch);
+                AutoHostNotifications = LoadBool("M_AutoHostNotifications", AutoHostNotifications);
+                AutoHostForceLastMinute = LoadBool("M_AutoHostForceLastMinute", AutoHostForceLastMinute);
+                AutoHostWaitLoadedPlayers = LoadBool("M_AutoHostWaitLoadedPlayers", AutoHostWaitLoadedPlayers);
+                AutoHostCancelBelowMin = LoadBool("M_AutoHostCancelBelowMin", AutoHostCancelBelowMin);
+                AutoHostInstantStart = LoadBool("M_AutoHostInstantStart", AutoHostInstantStart);
+                if (PlayerPrefs.HasKey("M_AutoHostMinPlayers")) AutoHostMinPlayers = PlayerPrefs.GetInt("M_AutoHostMinPlayers");
+                if (PlayerPrefs.HasKey("M_AutoHostStartDelaySeconds")) AutoHostStartDelaySeconds = PlayerPrefs.GetFloat("M_AutoHostStartDelaySeconds");
+                if (PlayerPrefs.HasKey("M_AutoHostFastStartPlayers")) AutoHostFastStartPlayers = PlayerPrefs.GetInt("M_AutoHostFastStartPlayers");
+                if (PlayerPrefs.HasKey("M_AutoHostFastStartDelaySeconds")) AutoHostFastStartDelaySeconds = PlayerPrefs.GetFloat("M_AutoHostFastStartDelaySeconds");
+                if (PlayerPrefs.HasKey("M_WalkSpeed")) walkSpeed = PlayerPrefs.GetFloat("M_WalkSpeed");
+                if (PlayerPrefs.HasKey("M_EngineSpeed")) engineSpeed = PlayerPrefs.GetFloat("M_EngineSpeed");
+                keyBinds["Toggle Menu"] = KeyCode.Insert;
                 if (PlayerPrefs.HasKey("M_SpoofName")) customNameInput = PlayerPrefs.GetString("M_SpoofName");
             }
             catch { }
@@ -3397,11 +3522,11 @@ namespace ElysiumModMenu
             GUILayout.BeginVertical(boxStyle);
             try
             {
-                GUILayout.Label("?? CUSTOM KEYBINDS", headerStyle);
+                GUILayout.Label("CUSTOM KEYBINDS", headerStyle);
+                GUILayout.Label(L("Menu toggle is locked to Insert.", "Меню открывается только на Insert."), safeLineStyle);
                 GUILayout.Space(10);
 
                 DrawKeybindRow("Magnet Cursor:", ref bindMagnetCursor, ref isWaitBindMagnetCursor);
-                DrawKeybindRow("Menu Toggle Key:", ref menuToggleKey, ref isWaitingForBind);
                 DrawKeybindRow("Mass Morph:", ref bindMassMorph, ref isWaitBindMassMorph);
                 DrawKeybindRow("Spawn Lobby:", ref bindSpawnLobby, ref isWaitBindSpawnLobby);
                 DrawKeybindRow("Despawn Lobby:", ref bindDespawnLobby, ref isWaitBindDespawnLobby);
@@ -3557,7 +3682,7 @@ namespace ElysiumModMenu
             string contributorHex = ColorUtility.ToHtmlStringRGB(whiteMenuTheme ? GetThemeAccentColor(new Color32(109, 138, 255, 255)) : new Color32(109, 138, 255, 255));
             string dangerHex = ColorUtility.ToHtmlStringRGB(whiteMenuTheme ? GetThemeAccentColor(new Color32(231, 76, 60, 255)) : new Color32(231, 76, 60, 255));
             string safeHex = ColorUtility.ToHtmlStringRGB(whiteMenuTheme ? GetThemeAccentColor(new Color32(57, 255, 20, 255)) : new Color32(57, 255, 20, 255));
-            string versionText = "1.3.0";
+            string versionText = "1.3.1";
 
             GUIStyle textStyle = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true, fontSize = 12 };
             textStyle.normal.textColor = whiteMenuTheme ? new Color(0.16f, 0.16f, 0.16f, 1f) : new Color(0.85f, 0.85f, 0.85f, 1f);
@@ -3751,7 +3876,7 @@ namespace ElysiumModMenu
             GUILayout.Space(3);
             dragToCursor = DrawToggle(dragToCursor, "Drag To Cursor", 230);
             GUILayout.Space(3);
-            autoFollowCursor = DrawToggle(autoFollowCursor, "Magnet Cursor (F9)", 230);
+            autoFollowCursor = DrawToggle(autoFollowCursor, $"Magnet Cursor ({bindMagnetCursor})", 230);
             GUILayout.Space(3);
             noClip = DrawToggle(noClip, "True NoClip", 230);
 
@@ -3845,6 +3970,14 @@ namespace ElysiumModMenu
             enableClipboard = DrawToggle(enableClipboard, L("Clipboard", "Буфер обмена"), 230);
             GUILayout.Space(3);
             enableChatLog = DrawToggle(enableChatLog, L("Save Chat Log", "Сохранять лог чата"), 230);
+            GUILayout.Space(3);
+            enableChatDarkMode = DrawToggle(enableChatDarkMode, L("Dark Chat Theme", "Темная тема чата"), 230);
+            GUILayout.Space(3);
+            if (enableChatDarkMode && GUILayout.Button(L("Turn Off Dark Chat", "Выключить темный чат"), btnStyle, GUILayout.Height(24)))
+            {
+                enableChatDarkMode = false;
+                SaveConfig();
+            }
             GUILayout.Space(3);
             enableColorCommand = DrawToggle(enableColorCommand, L("Enable /color", "Разрешить /color"), 230);
             GUILayout.Space(3);
@@ -3984,7 +4117,7 @@ namespace ElysiumModMenu
                 GUILayout.BeginHorizontal();
                 try
                 {
-                    autoFollowCursor = DrawToggle(autoFollowCursor, "Magnet Cursor (F9)", 160);
+                    autoFollowCursor = DrawToggle(autoFollowCursor, $"Magnet Cursor ({bindMagnetCursor})", 160);
                     noClip = DrawToggle(noClip, "True NoClip", 160);
                     GUILayout.FlexibleSpace();
                 }
@@ -5716,17 +5849,32 @@ namespace ElysiumModMenu
             }
             catch { }
         }
+
+        public void OnApplicationQuit()
+        {
+            SaveConfig();
+        }
+
+        public void OnDisable()
+        {
+            SaveConfig();
+        }
+
         public static KeyCode bindMagnetCursor = KeyCode.F9;
         public static bool isWaitBindMagnetCursor = false;
         public void Update()
         {
-            KeyCode toggleKey = keyBinds.ContainsKey("Toggle Menu") ? keyBinds["Toggle Menu"] : KeyCode.Insert;
-            if (Input.GetKeyDown(toggleKey) || Input.GetKeyDown(KeyCode.RightShift)) showMenu = !showMenu;
-
             bool isTypingOrBinding = isEditingName || isEditingLevel || isEditingFriendCode || isEditingLocalFriendCode || isEditingBan || customChatInputFocused ||
                                      isWaitingForBind || isWaitBindMassMorph || isWaitBindSpawnLobby ||
                                      isWaitBindDespawnLobby || isWaitBindCloseMeeting || isWaitBindInstaStart ||
-                                     isWaitBindEndCrew || isWaitBindEndImp || isWaitBindEndImpDC || isWaitBindEndHnsDC;
+                                     isWaitBindEndCrew || isWaitBindEndImp || isWaitBindEndImpDC || isWaitBindEndHnsDC ||
+                                     isWaitBindMagnetCursor;
+
+            if (!isTypingOrBinding && Input.GetKeyDown(KeyCode.Insert))
+            {
+                showMenu = !showMenu;
+                if (!showMenu) SaveConfig();
+            }
 
             if (!isTypingOrBinding)
             {
@@ -5772,6 +5920,10 @@ namespace ElysiumModMenu
                 if (rgbMenuHue > 1f) rgbMenuHue -= 1f;
                 UpdateAccentColor(Color.HSVToRGB(rgbMenuHue, 1f, 1f));
             }
+
+            if (wasShowMenu && !showMenu) SaveConfig();
+            wasShowMenu = showMenu;
+
             if (PlayerControl.LocalPlayer != null)
             {
                 TryHostOnlyKillAuraTick();
@@ -5803,14 +5955,6 @@ namespace ElysiumModMenu
                 else
                 {
                     localFriendCodeRefreshTimer = 0f;
-                }
-
-                if (Input.GetKeyDown(KeyCode.F9))
-                {
-                    autoFollowCursor = !autoFollowCursor;
-                    ShowNotification(autoFollowCursor ?
-                        "<color=#00FF00>[MAGNET]</color> Magnet Cursor: ON" :
-                        "<color=#FF0000>[MAGNET]</color> Magnet Cursor: OFF");
                 }
 
                 if ((tpToCursor && Input.GetMouseButtonDown(1)) ||
@@ -5974,10 +6118,6 @@ namespace ElysiumModMenu
                     }
                 }
                 catch { }
-
-                if (wasShowMenu && !showMenu) SaveConfig();
-                wasShowMenu = showMenu;
-
 
                 if (SpoofMenuEnabled && PlayerControl.LocalPlayer != null)
                 {
@@ -6180,6 +6320,7 @@ namespace ElysiumModMenu
                     else if (isWaitBindEndImp) { bindEndImp = e.keyCode; }
                     else if (isWaitBindEndImpDC) { bindEndImpDC = e.keyCode; }
                     else if (isWaitBindEndHnsDC) { bindEndHnsDC = e.keyCode; }
+                    else if (isWaitBindMagnetCursor) { bindMagnetCursor = e.keyCode; }
 
                     ResetAllBindWaits();
                     SaveConfig();
@@ -6210,12 +6351,6 @@ namespace ElysiumModMenu
                         if (isEditingLocalFriendCode) { localFriendCodeInput += e.character; }
                         e.Use();
                     }
-                }
-                else if (e.keyCode == menuToggleKey && !isTyping && !isBinding)
-                {
-                    showMenu = !showMenu;
-                    if (!showMenu) SaveConfig();
-                    e.Use();
                 }
             }
 
@@ -6748,30 +6883,73 @@ namespace ElysiumModMenu
 
         public static class ClipboardBridge
         {
+            private static bool isPastingChatInput = false;
+            private static int currentPasteCharPos = 0;
+            private static int lastClipboardFrame = -1;
+
             public static void Run(TextBoxTMP box)
             {
+                if (!enableClipboard) return;
                 if (box == null || !box.hasFocus) return;
 
                 bool controlHeld = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-                if (!controlHeld) return;
+                bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 
-                if (Input.GetKeyDown(KeyCode.C))
+                bool copyPressed = controlHeld && (Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.Insert));
+                bool pastePressed = (controlHeld && Input.GetKeyDown(KeyCode.V)) || (shiftHeld && Input.GetKeyDown(KeyCode.Insert));
+                bool cutPressed = controlHeld && Input.GetKeyDown(KeyCode.X);
+
+                if (!copyPressed && !pastePressed && !cutPressed) return;
+                if (lastClipboardFrame == Time.frameCount) return;
+                lastClipboardFrame = Time.frameCount;
+
+                if (copyPressed)
                 {
-                    GUIUtility.systemCopyBuffer = box.text;
+                    GUIUtility.systemCopyBuffer = box.text ?? string.Empty;
                 }
-                else if (Input.GetKeyDown(KeyCode.V))
+                else if (pastePressed)
                 {
                     string paste = GUIUtility.systemCopyBuffer;
                     if (!string.IsNullOrEmpty(paste))
                     {
-                        box.SetText(box.text + paste, string.Empty);
+                        string currentText = box.text ?? string.Empty;
+                        int caretPos = Mathf.Clamp(box.caretPos, 0, currentText.Length);
+                        string nextText = currentText.Insert(caretPos, paste);
+
+                        isPastingChatInput = true;
+                        box.SetText(nextText, string.Empty);
+                        isPastingChatInput = false;
                     }
                 }
-                else if (Input.GetKeyDown(KeyCode.X))
+                else if (cutPressed)
                 {
-                    GUIUtility.systemCopyBuffer = box.text;
+                    GUIUtility.systemCopyBuffer = box.text ?? string.Empty;
                     box.SetText(string.Empty, string.Empty);
                 }
+            }
+
+            public static bool IsCharAllowed(TextBoxTMP box, ref bool result)
+            {
+                if (box == null) return true;
+
+                string input = isPastingChatInput ? GUIUtility.systemCopyBuffer : Input.inputString;
+                if (string.IsNullOrEmpty(input)) return true;
+
+                string currentText = box.text ?? string.Empty;
+                int caretPos = Mathf.Clamp(box.caretPos, 0, currentText.Length);
+                string text = currentText.Insert(caretPos, input);
+
+                currentPasteCharPos = Mathf.Clamp(currentPasteCharPos, 0, Mathf.Max(0, text.Length - 1));
+                char currentChar = text[currentPasteCharPos];
+                currentPasteCharPos = currentPasteCharPos >= text.Length - 1 ? 0 : currentPasteCharPos + 1;
+
+                if (enableClipboard || allowLinksAndSymbols)
+                {
+                    result = currentChar != '\b' && currentChar != '\r' && currentChar != '\n';
+                    return false;
+                }
+
+                return true;
             }
         }
 
@@ -6780,11 +6958,14 @@ namespace ElysiumModMenu
         {
             public static void Postfix(TextBoxTMP __instance)
             {
+                if (__instance == null) return;
                 __instance.allowAllCharacters = true;
                 __instance.AllowSymbols = true;
                 __instance.AllowEmail = true;
             }
         }
+
+        [HarmonyPatch(typeof(TextBoxTMP), nameof(TextBoxTMP.Update))]
         public static class Clipboard_TextBoxTMP_Patch
         {
             public static void Postfix(TextBoxTMP __instance)
@@ -6793,11 +6974,24 @@ namespace ElysiumModMenu
             }
         }
 
+        [HarmonyPatch(typeof(TextBoxTMP), nameof(TextBoxTMP.IsCharAllowed))]
+        public static class Clipboard_TextBoxTMP_IsCharAllowed_Patch
+        {
+            public static bool Prefix(TextBoxTMP __instance, ref bool __result)
+            {
+                return ClipboardBridge.IsCharAllowed(__instance, ref __result);
+            }
+        }
+
         [HarmonyPatch(typeof(ChatController), nameof(ChatController.Update))]
         public static class ChatHistory_Update_Patch
         {
             public static void Postfix(ChatController __instance)
             {
+                if (__instance != null && __instance.freeChatField != null && __instance.freeChatField.textArea != null)
+                {
+                    ClipboardBridge.Run(__instance.freeChatField.textArea);
+                }
                 ChatHistory.HandleNavigation(__instance);
             }
         }
@@ -7201,7 +7395,7 @@ namespace ElysiumModMenu
 
                     if (ElysiumModMenuGUI.showWatermark)
                     {
-                        string shimmerTitle = ElysiumModMenuGUI.ApplyMenuShimmer("ElysiumModMenu v1.3.0");
+                        string shimmerTitle = ElysiumModMenuGUI.ApplyMenuShimmer("ElysiumModMenu v1.3.1");
                         finalString = $"{shimmerTitle} • " + finalString;
                     }
 
@@ -7881,6 +8075,8 @@ public static class ChatController_Update_Patch
     {
         try
         {
+            if (!ElysiumModMenuGUI.enableChatDarkMode) return;
+
             if (__instance.freeChatField != null && __instance.freeChatField.background != null)
             {
                 __instance.freeChatField.background.color = new Color32(40, 40, 40, byte.MaxValue);
@@ -7905,6 +8101,8 @@ public static class DarkMode_ChatBubblePatch
     {
         try
         {
+            if (!ElysiumModMenuGUI.enableChatDarkMode) return;
+
             Transform bg = __instance.transform.Find("Background");
             if (bg != null)
             {
@@ -8333,7 +8531,7 @@ public static class AutoChatEveryone_Start_Patch
 [HarmonyPatch(typeof(ChatController), nameof(ChatController.AddChat))]
 public static class ChatController_AddChat_Patch
 {
-    public static bool Prefix(PlayerControl sourcePlayer, ref string chatText, ChatController __instance)
+    public static bool Prefix(PlayerControl sourcePlayer, ref string chatText, bool censor, ChatController __instance)
     {
         if (string.IsNullOrEmpty(chatText)) return true;
         string lowerText = chatText.ToLower().Trim();
@@ -8399,7 +8597,82 @@ public static class ChatController_AddChat_Patch
                 return false;
             }
         }
+
+        if (ShouldShowGhostMessage(sourcePlayer))
+        {
+            return ShowGhostMessage(sourcePlayer, chatText, censor, __instance);
+        }
+
         return true;
+    }
+
+    private static bool ShouldShowGhostMessage(PlayerControl sourcePlayer)
+    {
+        try
+        {
+            if (!ElysiumModMenuGUI.readGhostChat && !ElysiumModMenuGUI.seeGhosts) return false;
+            if (sourcePlayer == null || sourcePlayer.Data == null) return false;
+            if (PlayerControl.LocalPlayer == null || PlayerControl.LocalPlayer.Data == null) return false;
+            if (PlayerControl.LocalPlayer.Data.IsDead) return false;
+
+            return sourcePlayer.Data.IsDead;
+        }
+        catch { return false; }
+    }
+
+    private static bool ShowGhostMessage(PlayerControl sourcePlayer, string chatText, bool censor, ChatController chat)
+    {
+        if (chat == null) return true;
+
+        ChatBubble pooledBubble = null;
+        try
+        {
+            NetworkedPlayerInfo sourceData = sourcePlayer.Data;
+            if (sourceData == null) return true;
+
+            pooledBubble = chat.GetPooledBubble();
+            pooledBubble.transform.SetParent(chat.scroller.Inner);
+            pooledBubble.transform.localScale = Vector3.one;
+
+            bool isLocal = sourcePlayer == PlayerControl.LocalPlayer;
+            if (isLocal) pooledBubble.SetRight();
+            else pooledBubble.SetLeft();
+
+            bool didVote = MeetingHud.Instance != null && MeetingHud.Instance.DidVote(sourcePlayer.PlayerId);
+            pooledBubble.SetCosmetics(sourceData);
+            chat.SetChatBubbleName(pooledBubble, sourceData, sourceData.IsDead, didVote, PlayerNameColor.Get(sourceData), null);
+
+            if (censor && AmongUs.Data.DataManager.Settings.Multiplayer.CensorChat)
+            {
+                chatText = BlockedWords.CensorWords(chatText, false);
+            }
+
+            pooledBubble.SetText($"<color=#b8b8b8>{chatText}</color>");
+            pooledBubble.AlignChildren();
+            chat.AlignAllBubbles();
+
+            if (!chat.IsOpenOrOpening && chat.notificationRoutine == null)
+            {
+                chat.notificationRoutine = chat.StartCoroutine(chat.BounceDot());
+            }
+
+            if (!isLocal && !chat.IsOpenOrOpening)
+            {
+                SoundManager.Instance.PlaySound(chat.messageSound, false).pitch = 0.5f + sourcePlayer.PlayerId / 15f;
+                chat.chatNotification.SetUp(sourcePlayer, chatText);
+            }
+
+            return false;
+        }
+        catch
+        {
+            try
+            {
+                if (pooledBubble != null) chat.chatBubblePool.Reclaim(pooledBubble);
+            }
+            catch { }
+            return true;
+        }
     }
 
 

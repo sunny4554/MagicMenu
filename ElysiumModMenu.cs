@@ -3522,7 +3522,8 @@ namespace ElysiumModMenu
             GUILayout.BeginVertical(boxStyle);
             try
             {
-                GUILayout.Label("?? CUSTOM KEYBINDS", headerStyle);
+                GUILayout.Label("CUSTOM KEYBINDS", headerStyle);
+                GUILayout.Label(L("Menu toggle is locked to Insert.", "Меню открывается только на Insert."), safeLineStyle);
                 GUILayout.Space(10);
 
                 DrawKeybindRow("Magnet Cursor:", ref bindMagnetCursor, ref isWaitBindMagnetCursor);
@@ -3875,7 +3876,7 @@ namespace ElysiumModMenu
             GUILayout.Space(3);
             dragToCursor = DrawToggle(dragToCursor, "Drag To Cursor", 230);
             GUILayout.Space(3);
-            autoFollowCursor = DrawToggle(autoFollowCursor, "Magnet Cursor (F9)", 230);
+            autoFollowCursor = DrawToggle(autoFollowCursor, $"Magnet Cursor ({bindMagnetCursor})", 230);
             GUILayout.Space(3);
             noClip = DrawToggle(noClip, "True NoClip", 230);
 
@@ -4116,7 +4117,7 @@ namespace ElysiumModMenu
                 GUILayout.BeginHorizontal();
                 try
                 {
-                    autoFollowCursor = DrawToggle(autoFollowCursor, "Magnet Cursor (F9)", 160);
+                    autoFollowCursor = DrawToggle(autoFollowCursor, $"Magnet Cursor ({bindMagnetCursor})", 160);
                     noClip = DrawToggle(noClip, "True NoClip", 160);
                     GUILayout.FlexibleSpace();
                 }

@@ -2475,6 +2475,21 @@ namespace ElysiumModMenu
             private static readonly Queue<float> emptyRpcDrops = new Queue<float>();
             private static float lastPasosNotify;
 
+            public static void RecordDrop()
+            {
+                float now = UnityEngine.Time.time;
+                while (emptyRpcDrops.Count > 0 && emptyRpcDrops.Peek() < now - PasosWindow)
+                    emptyRpcDrops.Dequeue();
+
+                emptyRpcDrops.Enqueue(now);
+
+                if (emptyRpcDrops.Count > PasosDropNotifyLimit && now - lastPasosNotify > PasosNotifyCooldown)
+                {
+                    lastPasosNotify = now;
+                    ElysiumModMenuGUI.ShowNotification($"<color=#FF0000>[SHIELD]</color> Pasos Limit: dropped empty RPC spam ({emptyRpcDrops.Count}/{PasosWindow:0.00}s)");
+                }
+            }
+
             public static void Postfix(MessageReader __result)
             {
                 if (!ElysiumModMenuGUI.enablePasosLimit || __result == null) return;
@@ -2486,19 +2501,34 @@ namespace ElysiumModMenu
                     __result.Tag = DroppedGameDataTag;
                     __result.Position = __result.Length;
 
-                    float now = UnityEngine.Time.time;
-                    while (emptyRpcDrops.Count > 0 && emptyRpcDrops.Peek() < now - PasosWindow)
-                        emptyRpcDrops.Dequeue();
-
-                    emptyRpcDrops.Enqueue(now);
-
-                    if (emptyRpcDrops.Count > PasosDropNotifyLimit && now - lastPasosNotify > PasosNotifyCooldown)
-                    {
-                        lastPasosNotify = now;
-                        ElysiumModMenuGUI.ShowNotification($"<color=#FF0000>[SHIELD]</color> Pasos Limit: dropped empty RPC spam ({emptyRpcDrops.Count}/{PasosWindow:0.00}s)");
-                    }
+                    RecordDrop();
                 }
                 catch { }
+            }
+        }
+
+        [HarmonyPatch]
+        public static class Shield_PasosLimit_HandleGameData_Patch
+        {
+            public static MethodBase TargetMethod()
+            {
+                return AccessTools.Method(typeof(InnerNetClient), "HandleGameData", new[] { typeof(MessageReader) });
+            }
+
+            public static bool Prefix(MessageReader parentReader)
+            {
+                if (!ElysiumModMenuGUI.enablePasosLimit || parentReader == null) return true;
+
+                try
+                {
+                    if (parentReader.Length > 0 && parentReader.BytesRemaining > 0) return true;
+
+                    Shield_PasosLimit_Patch.RecordDrop();
+                    return false;
+                }
+                catch { }
+
+                return true;
             }
         }
 

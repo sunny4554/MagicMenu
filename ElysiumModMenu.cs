@@ -2481,18 +2481,24 @@ namespace ElysiumModMenu
 
             public static void BeginMessageContext(int clientId)
             {
-                currentPasosClientId = clientId;
+                if (IsValidClientId(clientId))
+                    currentPasosClientId = clientId;
             }
 
             public static void SetCurrentClientId(int clientId)
             {
-                if (clientId >= 0)
+                if (IsValidClientId(clientId))
                     currentPasosClientId = clientId;
             }
 
             public static bool IsClientBlocked(int clientId)
             {
-                return clientId >= 0 && pasosBlockedClientIds.Contains(clientId);
+                return IsValidClientId(clientId) && pasosBlockedClientIds.Contains(clientId);
+            }
+
+            public static bool IsValidClientId(int clientId)
+            {
+                return clientId >= 0 && clientId < 256;
             }
 
             public static void RecordDrop(int clientId = -1)
@@ -2503,8 +2509,10 @@ namespace ElysiumModMenu
 
                 emptyRpcDrops.Enqueue(now);
 
-                int resolvedClientId = clientId >= 0 ? clientId : currentPasosClientId;
-                if (resolvedClientId >= 0 && !IsClientBlocked(resolvedClientId))
+                int resolvedClientId = IsValidClientId(clientId) ? clientId : currentPasosClientId;
+                if (!IsValidClientId(resolvedClientId))
+                    resolvedClientId = ResolveSingleRemoteClientId();
+                if (IsValidClientId(resolvedClientId) && !IsClientBlocked(resolvedClientId))
                     BlockPasosClient(resolvedClientId);
 
                 if (emptyRpcDrops.Count >= PasosDropNotifyLimit && now - lastPasosNotify > PasosNotifyCooldown)
@@ -2518,7 +2526,7 @@ namespace ElysiumModMenu
             {
                 try
                 {
-                    if (clientId < 0 || (AmongUsClient.Instance != null && clientId == AmongUsClient.Instance.ClientId)) return;
+                    if (!IsValidClientId(clientId) || (AmongUsClient.Instance != null && clientId == AmongUsClient.Instance.ClientId)) return;
 
                     pasosBlockedClientIds.Add(clientId);
 
@@ -2556,15 +2564,15 @@ namespace ElysiumModMenu
                     if (player != null)
                     {
                         int ownerId = (int)player.OwnerId;
-                        if (ownerId >= 0) return ownerId;
+                        if (IsValidClientId(ownerId)) return ownerId;
 
-                        if (player.Data != null && player.Data.ClientId >= 0)
+                        if (player.Data != null && IsValidClientId(player.Data.ClientId))
                             return player.Data.ClientId;
                     }
                 }
                 catch { }
 
-                return fallbackClientId;
+                return IsValidClientId(fallbackClientId) ? fallbackClientId : -1;
             }
 
             public static PlayerControl FindPlayerByClientId(int clientId)
@@ -2629,6 +2637,60 @@ namespace ElysiumModMenu
                         direct = ResolveClientId(field?.GetValue(source), depth + 1);
                         if (direct >= 0) return direct;
                     }
+
+                    string typeName = type.FullName ?? type.Name;
+                    if (typeName.IndexOf("Player", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        typeName.IndexOf("Client", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        foreach (PropertyInfo property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                        {
+                            if (property.GetIndexParameters().Length > 0) continue;
+
+                            try
+                            {
+                                direct = ConvertNumericClientId(property.GetValue(source));
+                                if (direct >= 0) return direct;
+                            }
+                            catch { }
+                        }
+
+                        foreach (FieldInfo field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                        {
+                            try
+                            {
+                                direct = ConvertNumericClientId(field.GetValue(source));
+                                if (direct >= 0) return direct;
+                            }
+                            catch { }
+                        }
+                    }
+                }
+                catch { }
+
+                return -1;
+            }
+
+            private static int ResolveSingleRemoteClientId()
+            {
+                try
+                {
+                    if (PlayerControl.AllPlayerControls == null) return -1;
+
+                    int found = -1;
+                    int count = 0;
+                    foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+                    {
+                        if (pc == null || pc == PlayerControl.LocalPlayer || pc.Data == null || pc.Data.Disconnected) continue;
+
+                        int ownerId = (int)pc.OwnerId;
+                        if (!IsValidClientId(ownerId)) continue;
+
+                        found = ownerId;
+                        count++;
+                        if (count > 1) return -1;
+                    }
+
+                    return count == 1 ? found : -1;
                 }
                 catch { }
 
@@ -2659,6 +2721,45 @@ namespace ElysiumModMenu
                 catch { }
 
                 return -1;
+            }
+
+            public static bool TryDropWholePacketIfPasosSpam(MessageReader parentReader, int clientId = -1, bool skipGameId = false)
+            {
+                if (!ElysiumModMenuGUI.enablePasosLimit || parentReader == null) return false;
+
+                try
+                {
+                    int oldPos = parentReader.Position;
+
+                    if (skipGameId)
+                    {
+                        if (parentReader.BytesRemaining < 4) return false;
+                        parentReader.ReadInt32();
+                    }
+
+                    while (parentReader.BytesRemaining > 0)
+                    {
+                        MessageReader child = parentReader.ReadMessage();
+                        if (child == null) continue;
+
+                        if (child.Tag == RpcGameDataTag && child.Length <= 0 && child.BytesRemaining <= 0)
+                        {
+                            parentReader.Position = parentReader.Length;
+                            RecordDrop(clientId);
+                            return true;
+                        }
+                    }
+
+                    parentReader.Position = oldPos;
+                }
+                catch
+                {
+                    try { parentReader.Position = parentReader.Length; } catch { }
+                    RecordDrop(clientId);
+                    return true;
+                }
+
+                return false;
             }
 
             public static void Postfix(MessageReader __result)
@@ -2762,6 +2863,8 @@ namespace ElysiumModMenu
 
                     MessageReader parentReader = __args != null && __args.Length > 0 ? __args[0] as MessageReader : null;
                     if (parentReader == null) return true;
+                    if (Shield_PasosLimit_Patch.TryDropWholePacketIfPasosSpam(parentReader, clientId, true))
+                        return false;
                     if (parentReader.Length > 0 && parentReader.BytesRemaining > 0) return true;
 
                     Shield_PasosLimit_Patch.RecordDrop(clientId);
@@ -2797,6 +2900,11 @@ namespace ElysiumModMenu
 
                     MessageReader parentReader = __args != null && __args.Length > 0 ? __args[0] as MessageReader : null;
                     if (parentReader == null) return true;
+                    if (Shield_PasosLimit_Patch.TryDropWholePacketIfPasosSpam(parentReader, clientId))
+                    {
+                        __result = EmptyPasosRoutine().WrapToIl2Cpp();
+                        return false;
+                    }
                     if (parentReader.Length > 0 && parentReader.BytesRemaining > 0) return true;
 
                     Shield_PasosLimit_Patch.RecordDrop(clientId);
@@ -2814,7 +2922,10 @@ namespace ElysiumModMenu
                 {
                     if (args == null || args.Length < 2 || args[1] == null) return -1;
                     int clientId = Shield_PasosLimit_Patch.ResolveClientId(args[1]);
-                    return clientId >= 0 ? clientId : Convert.ToInt32(args[1]);
+                    if (Shield_PasosLimit_Patch.IsValidClientId(clientId)) return clientId;
+
+                    int fallback = Convert.ToInt32(args[1]);
+                    return Shield_PasosLimit_Patch.IsValidClientId(fallback) ? fallback : -1;
                 }
                 catch { }
 
@@ -2853,9 +2964,8 @@ namespace ElysiumModMenu
                         return false;
                     }
 
-                    if (!HasEmptyGameDataReader(__instance)) return true;
+                    if (!HasPasosGameDataReader(__instance, clientId)) return true;
 
-                    Shield_PasosLimit_Patch.RecordDrop(clientId);
                     __result = false;
                     return false;
                 }
@@ -2864,7 +2974,7 @@ namespace ElysiumModMenu
                 return true;
             }
 
-            private static bool HasEmptyGameDataReader(object routine)
+            private static bool HasPasosGameDataReader(object routine, int clientId)
             {
                 FieldInfo[] fields = routine.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 foreach (FieldInfo field in fields)
@@ -2873,6 +2983,12 @@ namespace ElysiumModMenu
 
                     MessageReader reader = field.GetValue(routine) as MessageReader;
                     if (reader != null && reader.Length <= 0 && reader.BytesRemaining <= 0)
+                    {
+                        Shield_PasosLimit_Patch.RecordDrop(clientId);
+                        return true;
+                    }
+
+                    if (Shield_PasosLimit_Patch.TryDropWholePacketIfPasosSpam(reader, clientId))
                         return true;
                 }
 

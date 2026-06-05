@@ -101,7 +101,7 @@ namespace ElysiumModMenu
     }
     public class ElysiumModMenuGUI : MonoBehaviour
     {
-        public static string[] spoofMenuNames = { "Local Client", "Anti Cheat", "Lobby Tool", "Protection Tool", "Utility Client", "Network Tool", "RPC Tool", "Legacy Tool", "Alt Client", "Private Client" };
+        public static string[] spoofMenuNames = { "ElysiumModMenu", "HostGuard/TOH", "Polar", "BanMod", "Better Among Us", "Sicko Menu", "GNC", "KillNetwork (V1)", "KillNetwork (V2)", "KNM" };
         public static byte[] spoofMenuRPCs = { 89, 176, 204, 212, 151, 164, 154, 85, 150, 162 };
         public static float rpcSpoofDelay = 4f;
 
@@ -8497,40 +8497,40 @@ public static class RPCSniffer_Patch
 
     private static readonly Dictionary<byte, (string Name, string Color)> KnownMods = new Dictionary<byte, (string, string)>
         {
-            { 157, ("Modded Client", "#800000") },
-            { 121, ("Modded Client", "#800000") },
-            { 167, ("Utility Client", "#008000") },
-            { 164, ("Anti Cheat / Utility Client", "#FF0000") },
-            { 176, ("Host Protection", "#008000") },
-            { 195, ("Modded Client", "#FFFF00") },
-            { 204, ("Modded Client", "#FFFF00") },
-            { 154, ("Network Tool", "#FF0000") },
-            { 85,  ("RPC Tool", "#FF0000") },
-            { 150, ("RPC Tool", "#FF0000") },
-            { 162, ("RPC Tool", "#FF0000") },
-            { 250, ("RPC Tool", "#FF0000") },
-            { 212, ("Protection Tool", "#008000") },
-            { 213, ("Protection Tool", "#008000") },
-            { 214, ("Protection Tool", "#008000") },
-            { 215, ("Protection Tool", "#008000") },
-            { 216, ("Protection Tool", "#008000") },
-            { 217, ("Protection Tool", "#008000") },
-            { 218, ("Protection Tool", "#008000") },
-            { 219, ("Protection Tool", "#008000") },
-            { 144, ("Utility Client", "#FF0000") },
-            { 145, ("Utility Client", "#FF0000") },
-            { 188, ("Utility Client", "#FF0000") },
-            { 189, ("Utility Client", "#FF0000") },
-            { 169, ("Utility Client", "#FF0000") },
-            { 210, ("Modded Client", "#FFFF00") },
+            { 157, ("RockStar", "#800000") },
+            { 121, ("RockStar / Chocoo", "#800000") },
+            { 167, ("TuffMenu", "#008000") },
+            { 164, ("Hydra / Sicko", "#FF0000") },
+            { 176, ("HostGuard / TOH", "#008000") },
+            { 195, ("Polar Client", "#FFFF00") },
+            { 204, ("Polar Client", "#FFFF00") },
+            { 154, ("GNC", "#FF0000") },
+            { 85,  ("KillNet (Base)", "#FF0000") },
+            { 150, ("KillNet (V2)", "#FF0000") },
+            { 162, ("KNM", "#FF0000") },
+            { 250, ("KillNet (Alt)", "#FF0000") },
+            { 212, ("BanMod", "#008000") },
+            { 213, ("BanMod", "#008000") },
+            { 214, ("BanMod", "#008000") },
+            { 215, ("BanMod", "#008000") },
+            { 216, ("BanMod", "#008000") },
+            { 217, ("BanMod", "#008000") },
+            { 218, ("BanMod", "#008000") },
+            { 219, ("BanMod", "#008000") },
+            { 144, ("Gaff Menu", "#FF0000") },
+            { 145, ("Gaff Menu", "#FF0000") },
+            { 188, ("GMM", "#FF0000") },
+            { 189, ("GMM", "#FF0000") },
+            { 169, ("Malum", "#FF0000") },
+            { 210, ("Eclipse", "#FFFF00") },
             { 173, ("Private Client", "#FF0000") },
-            { 151, ("Modded Client", "#008000") },
-            { 152, ("Modded Client", "#008000") },
-            { 255, ("Modded Client", "#FFFF00") },
-            { 111, ("Network Tool", "#FF0000") },
-            { 231, ("Anti Cheat", "#FF0000") },
-            { 133, ("Local Client", "#00FFFF") },
-            { 89,  ("Legacy Client", "#008000") }
+            { 151, ("Better Among Us", "#008000") },
+            { 152, ("Better Among Us", "#008000") },
+            { 255, ("CrewMod", "#FFFF00") },
+            { 111, ("AUM (BitCrackers)", "#FF0000") },
+            { 231, ("SentinelAU", "#FF0000") },
+            { 133, ("Lunar / ElysiumModMenu", "#00FFFF") },
+            { 89,  ("ElysiumModMenu Old", "#008000") }
         };
 
     public static bool Prefix(PlayerControl __instance, byte callId, MessageReader reader)

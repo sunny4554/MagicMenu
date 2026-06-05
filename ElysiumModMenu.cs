@@ -101,7 +101,7 @@ namespace ElysiumModMenu
     }
     public class ElysiumModMenuGUI : MonoBehaviour
     {
-        public static string[] spoofMenuNames = { "ElysiumModMenu", "HostGuard/TOH", "Polar", "BanMod", "Better Among Us", "Sicko Menu", "GNC", "KillNetwork (V1)", "KillNetwork (V2)", "KNM" };
+        public static string[] spoofMenuNames = { "Local Client", "Anti Cheat", "Lobby Tool", "Protection Tool", "Utility Client", "Network Tool", "RPC Tool", "Legacy Tool", "Alt Client", "Private Client" };
         public static byte[] spoofMenuRPCs = { 89, 176, 204, 212, 151, 164, 154, 85, 150, 162 };
         public static float rpcSpoofDelay = 4f;
 
@@ -2184,7 +2184,7 @@ namespace ElysiumModMenu
         public static byte currentColorId = 0;
         private Vector2 playerListScrollPos = Vector2.zero;
         private Vector2 playerActionScrollPos = Vector2.zero;
-        private byte selectedHydraPlayerId = 255;
+        private byte selectedAntiCheatPlayerId = 255;
 
         public static string spoofLevelString = "100";
         public static string customNameInput = "хыхых";
@@ -2307,7 +2307,7 @@ namespace ElysiumModMenu
 
         public static bool killReach = false, killAnyone = false;
         public static bool endlessSsDuration = false, noVitalsCooldown = false;
-        public static bool endlessBattery = false, endlessVentTime = false, noVentCooldown = false;
+        public static bool endlessBattery = false, endlessVentTime = false, noVentCooldown = false, noMapCooldowns = false;
         public static bool reactorSab = false, oxygenSab = false, commsSab = false, elecSab = false;
         public static bool autoOpenDoors = false;
         public static bool moonWalk = false;
@@ -2922,6 +2922,7 @@ namespace ElysiumModMenu
                 SaveBool("M_CameraZoom", cameraZoom);
                 SaveBool("M_RevealVotes", RevealVotesEnabled);
                 SaveBool("M_NoTaskMode", noTaskMode);
+                SaveBool("M_NoMapCooldowns", noMapCooldowns);
                 SaveBool("M_NeverEndGame", neverEndGame);
                 SaveBool("M_RemovePenalty", removePenalty);
                 SaveBool("M_AlwaysShowLobbyTimer", alwaysShowLobbyTimer);
@@ -3076,6 +3077,7 @@ namespace ElysiumModMenu
                 cameraZoom = LoadBool("M_CameraZoom", cameraZoom);
                 RevealVotesEnabled = LoadBool("M_RevealVotes", RevealVotesEnabled);
                 noTaskMode = LoadBool("M_NoTaskMode", noTaskMode);
+                noMapCooldowns = LoadBool("M_NoMapCooldowns", noMapCooldowns);
                 neverEndGame = LoadBool("M_NeverEndGame", neverEndGame);
                 removePenalty = LoadBool("M_RemovePenalty", removePenalty);
                 alwaysShowLobbyTimer = LoadBool("M_AlwaysShowLobbyTimer", alwaysShowLobbyTimer);
@@ -3719,7 +3721,7 @@ namespace ElysiumModMenu
                 GUILayout.Label($"<b><color=#{safeHex}>{L("Make sure you are using the latest version from GitHub releases.", "Убедитесь, что используете последнюю версию из GitHub releases.")}</color></b>", textStyle);
                 GUILayout.Space(8);
                 GUILayout.Label($"<b><color=#{accentHex}>{L("Quick Hotkeys", "Быстрые клавиши")}</color></b>", textStyle);
-                GUILayout.Label(L("Insert / Right Shift: open or close menu", "Insert / Right Shift: открыть или закрыть меню"), textStyle);
+                GUILayout.Label(L("Insert: open or close menu", "Insert: открыть или закрыть меню"), textStyle);
                 GUILayout.Label(L("Right Click: teleport to cursor", "ПКМ: телепорт к курсору"), textStyle);
                 GUILayout.Label(L("F9: magnet cursor", "F9: магнит курсора"), textStyle);
                 GUILayout.EndVertical();
@@ -3935,6 +3937,8 @@ namespace ElysiumModMenu
             endlessVentTime = DrawToggle(endlessVentTime, "Endless Vent Time", 230);
             GUILayout.Space(3);
             noVentCooldown = DrawToggle(noVentCooldown, "No Vent Cooldown", 230);
+            GUILayout.Space(3);
+            noMapCooldowns = DrawToggle(noMapCooldowns, "No Map Cooldowns", 230);
             GUILayout.Space(3);
             endlessBattery = DrawToggle(endlessBattery, "Endless Battery", 230);
             GUILayout.Space(3);
@@ -4569,14 +4573,14 @@ namespace ElysiumModMenu
                     if (forcedPreGameRoles.ContainsKey(pc.PlayerId)) pName += " [*]";
                     else if (forcedImpostors.Contains(pc.PlayerId)) pName += " [Imp]";
 
-                    bool isSelected = selectedHydraPlayerId == pc.PlayerId;
+                    bool isSelected = selectedAntiCheatPlayerId == pc.PlayerId;
 
                     GUI.contentColor = Color.white;
                     try { GUI.contentColor = Palette.PlayerColors[pc.Data.DefaultOutfit.ColorId]; } catch { }
 
                     if (GUILayout.Button(pName, isSelected ? activeTabStyle : btnStyle, GUILayout.Height(30)))
                     {
-                        selectedHydraPlayerId = pc.PlayerId;
+                        selectedAntiCheatPlayerId = pc.PlayerId;
                     }
                     GUI.contentColor = Color.white;
                 }
@@ -4587,7 +4591,7 @@ namespace ElysiumModMenu
             GUILayout.BeginVertical(boxStyle, GUILayout.ExpandWidth(true));
             playerActionScrollPos = GUILayout.BeginScrollView(playerActionScrollPos);
 
-            PlayerControl target = lockedPlayersList.FirstOrDefault(p => p.PlayerId == selectedHydraPlayerId);
+            PlayerControl target = lockedPlayersList.FirstOrDefault(p => p.PlayerId == selectedAntiCheatPlayerId);
 
             if (target != null && target.Data != null)
             {
@@ -5162,6 +5166,8 @@ namespace ElysiumModMenu
             endlessVentTime = DrawToggle(endlessVentTime, "Endless Vent Time", 160);
             GUILayout.Space(5);
             noVentCooldown = DrawToggle(noVentCooldown, "No Vent Cooldown", 160);
+            GUILayout.Space(5);
+            noMapCooldowns = DrawToggle(noMapCooldowns, "No Map Cooldowns", 160);
             GUILayout.EndVertical();
 
             GUILayout.Space(5);
@@ -7768,6 +7774,67 @@ namespace ElysiumModMenu
             }
         }
 
+        private static bool TrySetCooldownMember(object target, float value)
+        {
+            if (target == null) return false;
+
+            string[] names = { "CoolDown", "_CoolDown_k__BackingField", "<CoolDown>k__BackingField", "coolDown", "cooldown" };
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+            try
+            {
+                Type type = target.GetType();
+                foreach (string name in names)
+                {
+                    PropertyInfo property = type.GetProperty(name, flags);
+                    if (property != null && property.CanWrite)
+                    {
+                        property.SetValue(target, value, null);
+                        return true;
+                    }
+
+                    FieldInfo field = type.GetField(name, flags);
+                    if (field != null)
+                    {
+                        field.SetValue(target, value);
+                        return true;
+                    }
+                }
+            }
+            catch { }
+
+            return false;
+        }
+
+        [HarmonyPatch(typeof(Ladder), "SetDestinationCooldown")]
+        public static class Ladder_SetDestinationCooldown_Patch
+        {
+            public static bool Prefix(Ladder __instance)
+            {
+                try
+                {
+                    if (!ElysiumModMenuGUI.noMapCooldowns) return true;
+                    TrySetCooldownMember(__instance, 0f);
+                    return false;
+                }
+                catch { return true; }
+            }
+        }
+
+        [HarmonyPatch(typeof(ZiplineConsole), "Update")]
+        public static class ZiplineConsole_Update_Patch
+        {
+            public static void Postfix(ZiplineConsole __instance)
+            {
+                try
+                {
+                    if (!ElysiumModMenuGUI.noMapCooldowns) return;
+                    TrySetCooldownMember(__instance, 0f);
+                }
+                catch { }
+            }
+        }
+
         [HarmonyPatch(typeof(PlayerControl), "MurderPlayer")]
         public static class KillCooldownTrackerPatch2
         {
@@ -8430,40 +8497,40 @@ public static class RPCSniffer_Patch
 
     private static readonly Dictionary<byte, (string Name, string Color)> KnownMods = new Dictionary<byte, (string, string)>
         {
-            { 157, ("RockStar", "#800000") },
-            { 121, ("RockStar / Chocoo", "#800000") },
-            { 167, ("TuffMenu", "#008000") },
-            { 164, ("Hydra / Sicko", "#FF0000") },
-            { 176, ("HostGuard / TOH", "#008000") },
-            { 195, ("Polar Client", "#FFFF00") },
-            { 204, ("Polar Client", "#FFFF00") },
-            { 154, ("GNC", "#FF0000") },
-            { 85,  ("KillNet (Base)", "#FF0000") },
-            { 150, ("KillNet (V2)", "#FF0000") },
-            { 162, ("KNM", "#FF0000") },
-            { 250, ("KillNet (Alt)", "#FF0000") },
-            { 212, ("BanMod", "#008000") },
-            { 213, ("BanMod", "#008000") },
-            { 214, ("BanMod", "#008000") },
-            { 215, ("BanMod", "#008000") },
-            { 216, ("BanMod", "#008000") },
-            { 217, ("BanMod", "#008000") },
-            { 218, ("BanMod", "#008000") },
-            { 219, ("BanMod", "#008000") },
-            { 144, ("Gaff Menu", "#FF0000") },
-            { 145, ("Gaff Menu", "#FF0000") },
-            { 188, ("GMM", "#FF0000") },
-            { 189, ("GMM", "#FF0000") },
-            { 169, ("Malum", "#FF0000") },
-            { 210, ("Eclipse", "#FFFF00") },
-            { 173, ("Private", "#FF0000") },
-            { 151, ("Better Among Us", "#008000") },
-            { 152, ("Better Among Us", "#008000") },
-            { 255, ("CrewMod", "#FFFF00") },
-            { 111, ("AUM (BitCrackers)", "#FF0000") },
-            { 231, ("SentinelAU", "#FF0000") },
-            { 133, ("Lunar / ElysiumModMenu", "#00FFFF") },
-            { 89,  ("ElysiumModMenu Old", "#008000") }
+            { 157, ("Modded Client", "#800000") },
+            { 121, ("Modded Client", "#800000") },
+            { 167, ("Utility Client", "#008000") },
+            { 164, ("Anti Cheat / Utility Client", "#FF0000") },
+            { 176, ("Host Protection", "#008000") },
+            { 195, ("Modded Client", "#FFFF00") },
+            { 204, ("Modded Client", "#FFFF00") },
+            { 154, ("Network Tool", "#FF0000") },
+            { 85,  ("RPC Tool", "#FF0000") },
+            { 150, ("RPC Tool", "#FF0000") },
+            { 162, ("RPC Tool", "#FF0000") },
+            { 250, ("RPC Tool", "#FF0000") },
+            { 212, ("Protection Tool", "#008000") },
+            { 213, ("Protection Tool", "#008000") },
+            { 214, ("Protection Tool", "#008000") },
+            { 215, ("Protection Tool", "#008000") },
+            { 216, ("Protection Tool", "#008000") },
+            { 217, ("Protection Tool", "#008000") },
+            { 218, ("Protection Tool", "#008000") },
+            { 219, ("Protection Tool", "#008000") },
+            { 144, ("Utility Client", "#FF0000") },
+            { 145, ("Utility Client", "#FF0000") },
+            { 188, ("Utility Client", "#FF0000") },
+            { 189, ("Utility Client", "#FF0000") },
+            { 169, ("Utility Client", "#FF0000") },
+            { 210, ("Modded Client", "#FFFF00") },
+            { 173, ("Private Client", "#FF0000") },
+            { 151, ("Modded Client", "#008000") },
+            { 152, ("Modded Client", "#008000") },
+            { 255, ("Modded Client", "#FFFF00") },
+            { 111, ("Network Tool", "#FF0000") },
+            { 231, ("Anti Cheat", "#FF0000") },
+            { 133, ("Local Client", "#00FFFF") },
+            { 89,  ("Legacy Client", "#008000") }
         };
 
     public static bool Prefix(PlayerControl __instance, byte callId, MessageReader reader)

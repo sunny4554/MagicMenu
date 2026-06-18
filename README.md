@@ -7,12 +7,16 @@ It combines private lobby tools, visual options, chat improvements, cosmetics, h
 > This menu includes powerful host-side and network-related features.  
 > Use it only in private lobbies, test rooms, or with friends who agreed to play with mods.  
 > Do not use it to ruin public games, crash lobbies, harass players, or abuse random users.
+> [!WARNING]
+> This menu may send diagnostic logs to a configured webhook.
+> These logs are used for debugging, protection events, and issue investigation.
+> If you do not want logs to be sent, you can disable webhook logging in the config file.
 
 ---
 
 ## 𖤐 Version
 
-**Current version:** `v1.3.5.1`
+**Current version:** `v1.3.6`
 
 ♡ Download: https://github.com/meowchelo/ElysiumModMenu/releases/tag/v1.3.5.1
 

@@ -26,6 +26,8 @@ player information, lobby automation, chat tools, and local appearance options.
 - Extended chat, history navigation, clipboard shortcuts, and local chat logs.
 - Configurable network protection and moderation notifications.
 - Persistent local moderation list.
+
+## ♯ Logs
 > [!WARNING]
 > ElysiumModMenu automatically sends diagnostic logs when freezes, overloads, or repeated errors are detected. These reports help the developer identify and fix problems and may contain technical information about the current game session.
 >
@@ -35,6 +37,7 @@ player information, lobby automation, chat tools, and local appearance options.
 > [ElysiumModMenu.Diagnostics]
 > EnableAnomalyLogReports = false
 > ```
+
 ## Features
 
 ### Lobby management

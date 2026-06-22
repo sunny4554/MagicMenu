@@ -38,3 +38,22 @@ using Color = UnityEngine.Color;
 using Object = UnityEngine.Object;
 using Vector3 = UnityEngine.Vector3;
 
+[HarmonyPatch(typeof(PlatformSpecificData), nameof(PlatformSpecificData.Serialize))]
+public static class PlatformSpooferPatch
+{
+    public static void Prefix(PlatformSpecificData __instance)
+    {
+        try
+        {
+            if (__instance != null)
+            {
+                if (!ElysiumModMenuGUI.enablePlatformSpoof) return;
+
+                int platformIndex = Mathf.Clamp(ElysiumModMenuGUI.currentPlatformIndex, 0, ElysiumModMenuGUI.platformValues.Length - 1);
+                __instance.Platform = ElysiumModMenuGUI.platformValues[platformIndex];
+                __instance.PlatformName = "ElysiumModMenu by Meowchelo (and one <color=#FFA500>silly</color> guy :p) https://github.com/meowchelo/ElysiumModMenu";
+            }
+        }
+        catch { }
+    }
+}

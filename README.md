@@ -150,26 +150,6 @@ To update the menu:
 
 The Platform Spoof option can display Epic, Steam, Mac, Microsoft, Itch, iOS, Android, Switch, Xbox, PlayStation, or Starlight to other clients. These are spoofing targets, not platforms on which the mod itself can run.
 
-## ♯ Diagnostic logs
-
-> [!WARNING]
-> Diagnostic reporting is enabled by default. When the game detects a freeze, error burst, or log overload, the configured build may send a diagnostic summary and attach affected Unity/BepInEx log files to the maintainer's configured endpoint.
-
-### Enable or disable diagnostic reporting
-
-Open:
-
-```
-Among Us/ElysiumModMenu/ElysiumModMenu.cfg
-```
-
-Under `[ElysiumModMenu.Diagnostics]`, set:
-
-```
-EnableAnomalyLogReports = false
-```
-
-Use `true` to enable automatic anomaly reports. Restart the game after changing the file.
 
 ### Enable detailed local logs
 

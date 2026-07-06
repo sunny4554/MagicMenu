@@ -19,7 +19,7 @@
 <br>
 <br>
 
-<a href="https://discord.gg/DpeWsCqZ">
+<a href="https://discord.gg/C3X8pwAuU5">
   <img src="https://img.shields.io/badge/Discord-ElysiumModMenu-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord">
 </a>
 

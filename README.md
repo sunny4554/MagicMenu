@@ -1,7 +1,7 @@
 
 <div align="center">
 
-# Elysium Mod Menu (emm)- Among us
+# Elysium Mod Menu (emm) - Among us
 
 **A sleek, client-side mod menu for Among Us.**
 

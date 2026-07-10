@@ -63,6 +63,7 @@ internal static class AcovAccessLists
 		try
 		{
 			if (target == null) return false;
+			if (ElysiumModMenu.ElysiumModMenuGUI.IsProtectedFromAnticheat(target)) return false;
 			string fc = target.FriendCode;
 			if (string.IsNullOrEmpty(fc)) return false;
 			ElysiumModMenu.ElysiumModMenuGUI.AddToBanList(fc, string.IsNullOrEmpty(target.ProductUserId) ? "Unknown" : target.ProductUserId, string.IsNullOrEmpty(target.PlayerName) ? "Unknown" : target.PlayerName, reason);
@@ -74,6 +75,7 @@ internal static class AcovAccessLists
 	{
 		try
 		{
+			if (ElysiumModMenu.ElysiumModMenuGUI.IsProtectedFromAnticheat(identity.PlayerName, identity.FriendCode, identity.ProductUserId)) return;
 			string fc = identity.FriendCode;
 			if (string.IsNullOrEmpty(fc)) fc = identity.ProductUserId;
 			if (string.IsNullOrEmpty(fc)) return;

@@ -285,6 +285,10 @@ public static class ElysiumAutoHostService
                 public float LoadGraceRemainingSeconds;
                 public bool FastStartActive;
                 public bool ForceStartActive;
+                public bool ShieldBreakEnabled;
+                public string ShieldBreakState = string.Empty;
+                public bool AutoRunEnabled;
+                public string AutoRunState = string.Empty;
             }
 
             private enum AutoHostState
@@ -298,10 +302,18 @@ public static class ElysiumAutoHostService
             private const float LobbyLifetimeSeconds = 600f;
             private const float LastMinuteStartSeconds = 60f;
             private const float NotificationCooldownSeconds = 0.75f;
+            private const float ShieldBreakDelaySeconds = 0.15f;
+            private const float ShieldBreakTargetGraceSeconds = 1.0f;
+            private const float AutoRunStartDelaySeconds = 1.75f;
+            private const float AutoRunEndRetrySeconds = 0.35f;
 
             private static AutoHostState state = AutoHostState.Disabled;
             private static string lastReason = "disabled";
+            private static string shieldBreakState = "idle";
+            private static string autoRunState = "idle";
             private static float nextTickAt;
+            private static float nextShieldBreakAt;
+            private static float nextAutoRunEndAttemptAt = -1f;
             private static float countdownStartedAt = -1f;
             private static float activeCountdownDelay = -1f;
             private static float backoffUntil = -1f;
@@ -311,10 +323,14 @@ public static class ElysiumAutoHostService
             private static float lastNotificationAt = -1f;
             private static int lobbyGameId = -1;
             private static int lastCountdownNotice = -1;
+            private static bool autoRunEndSentThisMatch;
+            private static readonly Dictionary<byte, float> shieldBreakTargetGraceUntil = new Dictionary<byte, float>();
 
             public static void Tick()
             {
                 float now = Time.unscaledTime;
+                TickAutoShieldBreak(now);
+                TickAutoRunEnd(now);
                 if (now < nextTickAt) return;
                 nextTickAt = now + TickIntervalSeconds;
 
@@ -386,6 +402,10 @@ public static class ElysiumAutoHostService
                     EffectiveStartDelaySeconds = EffectiveStartDelay(0),
                     WarmupRemainingSeconds = WarmupRemaining,
                     LoadGraceRemainingSeconds = LoadGraceRemaining,
+                    ShieldBreakEnabled = ElysiumModMenuGUI.AutoHostShieldBreakEnabled,
+                    ShieldBreakState = shieldBreakState ?? string.Empty,
+                    AutoRunEnabled = AutoRunEnabled,
+                    AutoRunState = autoRunState ?? string.Empty,
                 };
                 InnerNetClient client = TryGetClient();
                 if (client != null)
@@ -419,27 +439,42 @@ public static class ElysiumAutoHostService
                 GameStartManager manager = TryGetGameStartManager();
                 if (manager == null) return "Кнопка старта не найдена.";
 
+                if (ElysiumModMenuGUI.AutoHostWaitLoadedPlayers && !ElysiumModMenuGUI.AreAllLobbyPlayersLoadedForStart(out int connectedPlayers, out int readyPlayers, out string loadingName))
+                {
+                    SetState(AutoHostState.WaitingLoad, $"Waiting for players to load {readyPlayers}/{connectedPlayers}: {loadingName}");
+                    return $"Waiting for players to load {readyPlayers}/{connectedPlayers}: {loadingName}";
+                }
+
                 if (!TryConfiguredStart(manager))
                 {
-                    EnterBackoff("Ручной старт отклонен");
-                    return "Старт не сработал.";
+                    EnterBackoff("Manual start rejected");
+                    return "Start did not trigger.";
                 }
                 lastStartIssuedAt = Time.unscaledTime;
                 countdownStartedAt = -1f;
                 activeCountdownDelay = -1f;
                 backoffUntil = -1f;
-                SetState(AutoHostState.Starting, "Ручной старт");
-                Notify("Автохост", "Матч запускается вручную.");
-                return "Старт отправлен.";
+                SetState(AutoHostState.Starting, "Manual start");
+                Notify("AutoHost", "Match is starting manually.");
+                return "Start sent.";
+            }
+
+            public static void ResetAutoRunMatchState()
+            {
+                autoRunEndSentThisMatch = false;
+                nextAutoRunEndAttemptAt = -1f;
+                autoRunState = AutoRunEnabled ? "waiting Shhh" : "idle";
             }
 
             private static void TickHostedLobby(InnerNetClient client, float now)
             {
                 int connectedPlayers = CountLobbyPlayers(client, out int readyPlayers, out string loadingName);
-                bool forceStart = ShouldForceStart(connectedPlayers, out string forceReason);
+                bool autoRun = AutoRunEnabled;
+                string forceReason = string.Empty;
+                bool forceStart = !autoRun && ShouldForceStart(connectedPlayers, out forceReason);
                 float warmupRemaining = WarmupRemaining;
 
-                if (!forceStart && warmupRemaining > 0.05f)
+                if (!autoRun && !forceStart && warmupRemaining > 0.05f)
                 {
                     countdownStartedAt = -1f;
                     activeCountdownDelay = -1f;
@@ -449,9 +484,10 @@ public static class ElysiumAutoHostService
                     return;
                 }
 
-                bool waitingForLoad = ElysiumModMenuGUI.AutoHostWaitLoadedPlayers && connectedPlayers > readyPlayers;
-                if (waitingForLoad && !forceStart && !CanBypassLoadWait(now, readyPlayers, connectedPlayers, loadingName))
+                bool waitingForLoad = (ElysiumModMenuGUI.AutoHostWaitLoadedPlayers || autoRun) && connectedPlayers > readyPlayers;
+                if (waitingForLoad)
                 {
+                    if (loadWaitStartedAt < 0f) loadWaitStartedAt = now;
                     countdownStartedAt = -1f;
                     activeCountdownDelay = -1f;
                     lastStartIssuedAt = -1f;
@@ -486,7 +522,7 @@ public static class ElysiumAutoHostService
                 if (!forceStart && !enoughPlayers && !continueBelowMin)
                 {
                     if (countdownStartedAt >= 0f)
-                        Notify("Автохост", "Отсчет отменен: игроков стало меньше минимума.");
+                        Notify("AutoHost", "Countdown cancelled: player count dropped below minimum.");
                     countdownStartedAt = -1f;
                     activeCountdownDelay = -1f;
                     lastCountdownNotice = -1;
@@ -500,8 +536,8 @@ public static class ElysiumAutoHostService
                     countdownStartedAt = now;
                     activeCountdownDelay = delay;
                     lastCountdownNotice = -1;
-                    SetState(AutoHostState.Countdown, IsFastStartActive(connectedPlayers) ? "Быстрый старт" : "Минимум игроков набран");
-                    Notify("Автохост", $"Старт через {Mathf.CeilToInt(delay)} с.");
+                    SetState(AutoHostState.Countdown, autoRun ? "Auto run: all loaded" : (IsFastStartActive(connectedPlayers) ? "Быстрый старт" : "Минимум игроков набран"));
+                    Notify("AutoHost", $"Starting in {Mathf.CeilToInt(delay)}s.");
                 }
 
                 if (!forceStart && now - countdownStartedAt < delay)
@@ -514,12 +550,12 @@ public static class ElysiumAutoHostService
                 GameStartManager manager = TryGetGameStartManager();
                 if (manager == null)
                 {
-                    EnterBackoff("Кнопка старта не найдена");
+                    EnterBackoff("Start button not found");
                     return;
                 }
                 if (!TryConfiguredStart(manager))
                 {
-                    EnterBackoff(forceStart ? "Форс-старт отклонен" : "Старт отклонен");
+                    EnterBackoff(forceStart ? "Force start rejected" : "Start rejected");
                     return;
                 }
 
@@ -528,8 +564,8 @@ public static class ElysiumAutoHostService
                 backoffUntil = -1f;
                 lastStartIssuedAt = now;
                 lastCountdownNotice = -1;
-                SetState(AutoHostState.Starting, forceStart ? forceReason : "Старт матча");
-                Notify("Автохост", forceStart ? forceReason : "Минимум набран, запускаю матч.");
+                SetState(AutoHostState.Starting, autoRun ? "Auto run start" : (forceStart ? forceReason : "Match start"));
+                Notify("AutoHost", autoRun ? "Auto run: loaded, starting match." : (forceStart ? forceReason : "Minimum reached, starting match."));
             }
 
             private static void TrackLobby(InnerNetClient client, float now)
@@ -550,7 +586,7 @@ public static class ElysiumAutoHostService
                 if (whole == 60 || whole == 30 || whole == 15 || whole == 10 || whole == 5 || whole == 3 || whole == 2 || whole == 1)
                 {
                     lastCountdownNotice = whole;
-                    Notify("Автохост", $"Старт через {whole} с.");
+                    Notify("AutoHost", $"Starting in {whole}s.");
                 }
             }
 
@@ -561,7 +597,7 @@ public static class ElysiumAutoHostService
                 try
                 {
                     manager.MinPlayers = 1;
-                    if (ElysiumModMenuGUI.AutoHostInstantStart)
+                    if (ElysiumModMenuGUI.AutoHostInstantStart || AutoRunEnabled)
                     {
                         manager.startState = GameStartManager.StartingStates.Countdown;
                         manager.countDownTimer = 0f;
@@ -582,15 +618,267 @@ public static class ElysiumAutoHostService
                 lastCountdownNotice = -1;
                 backoffUntil = Time.unscaledTime + BackoffSeconds;
                 SetState(AutoHostState.Backoff, reason);
-                Notify("Автохост: пауза", reason);
+                Notify("AutoHost: backoff", reason);
             }
 
             private static void ResetLobbyFlow(bool clearBackoff)
             {
                 countdownStartedAt = -1f;
+                activeCountdownDelay = -1f;
                 lastStartIssuedAt = -1f;
                 lastCountdownNotice = -1;
                 if (clearBackoff) backoffUntil = -1f;
+            }
+
+            private static void TickAutoRunEnd(float now)
+            {
+                if (!AutoRunEnabled || !IsEnabled)
+                {
+                    ResetAutoRunEndState("disabled", true);
+                    return;
+                }
+
+                InnerNetClient client = TryGetClient();
+                if (client == null || !client.AmHost)
+                {
+                    ResetAutoRunEndState(client != null && !client.AmHost ? "host only" : "waiting", false);
+                    return;
+                }
+
+                if (!IsInMatch())
+                {
+                    if (LobbyBehaviour.Instance != null)
+                    {
+                        autoRunEndSentThisMatch = false;
+                        nextAutoRunEndAttemptAt = -1f;
+                    }
+                    autoRunState = IsEndGameScreen() ? "end screen" : "waiting match";
+                    return;
+                }
+
+                if (autoRunEndSentThisMatch)
+                {
+                    autoRunState = "imp win sent";
+                    return;
+                }
+
+                if (!ElysiumModMenuGUI.HasCurrentGameSeenShhh())
+                {
+                    autoRunState = "waiting Shhh";
+                    return;
+                }
+
+                if (nextAutoRunEndAttemptAt > 0f && now < nextAutoRunEndAttemptAt)
+                    return;
+
+                if (TryEndGameAsImpostorWin())
+                {
+                    autoRunEndSentThisMatch = true;
+                    nextAutoRunEndAttemptAt = -1f;
+                    autoRunState = "imp win sent";
+                    Notify("Auto Run", "Shhh seen, ending with impostor win.");
+                    return;
+                }
+
+                nextAutoRunEndAttemptAt = now + AutoRunEndRetrySeconds;
+                autoRunState = "retry end";
+            }
+
+            private static void ResetAutoRunEndState(string reason, bool clearSent)
+            {
+                autoRunState = reason;
+                nextAutoRunEndAttemptAt = -1f;
+                if (clearSent) autoRunEndSentThisMatch = false;
+            }
+
+            private static bool TryEndGameAsImpostorWin()
+            {
+                bool tempBlock = false;
+                bool changedBlock = false;
+                try
+                {
+                    if (!ElysiumModMenuGUI.CanRunHostEndGameAction(false) || GameManager.Instance == null)
+                        return false;
+
+                    int reasonCode = GameManager.Instance.IsHideAndSeek() ? 8 : 3;
+                    tempBlock = ElysiumModMenuGUI.neverEndGame;
+                    changedBlock = true;
+                    ElysiumModMenuGUI.neverEndGame = false;
+                    GameManager.Instance.RpcEndGame((GameOverReason)reasonCode, false);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+                finally
+                {
+                    if (changedBlock) ElysiumModMenuGUI.neverEndGame = tempBlock;
+                }
+            }
+
+            private static void TickAutoShieldBreak(float now)
+            {
+                if (!ElysiumModMenuGUI.AutoHostShieldBreakEnabled || !IsEnabled)
+                {
+                    ResetShieldBreakState("disabled");
+                    return;
+                }
+
+                if (now < nextShieldBreakAt) return;
+                nextShieldBreakAt = now + ShieldBreakDelaySeconds;
+
+                InnerNetClient client = TryGetClient();
+                if (client == null || !client.AmHost || !IsInMatch() || IsMeetingOrExileActive())
+                {
+                    ResetShieldBreakState(client != null && !client.AmHost ? "host only" : "waiting");
+                    return;
+                }
+
+                PruneShieldBreakTargetGrace(now);
+
+                if (!TryFindShieldBreakPair(now, out PlayerControl killer, out PlayerControl target))
+                {
+                    shieldBreakState = "waiting for protected target";
+                    return;
+                }
+
+                if (TryHostShieldBreakCmdCheckMurder(killer, target))
+                {
+                    shieldBreakTargetGraceUntil[target.PlayerId] = now + ShieldBreakTargetGraceSeconds;
+                    shieldBreakState = $"{SafePlayerName(killer)} -> shield {SafePlayerName(target)}";
+                    Notify("AutoHost Shield", $"{SafePlayerName(killer)} hit protected {SafePlayerName(target)}.");
+                }
+            }
+
+            private static bool TryFindShieldBreakPair(float now, out PlayerControl killer, out PlayerControl target)
+            {
+                killer = null;
+                target = null;
+
+                if (PlayerControl.AllPlayerControls == null) return false;
+
+                float maxDistance = Mathf.Max(0.5f, GetVanillaKillDistance() + 0.25f);
+                float bestDistance = float.MaxValue;
+                try
+                {
+                    foreach (PlayerControl possibleKiller in PlayerControl.AllPlayerControls)
+                    {
+                        if (!IsReadyShieldBreaker(possibleKiller)) continue;
+
+                        foreach (PlayerControl possibleTarget in PlayerControl.AllPlayerControls)
+                        {
+                            if (!IsProtectedShieldBreakTarget(possibleKiller, possibleTarget)) continue;
+                            if (shieldBreakTargetGraceUntil.TryGetValue(possibleTarget.PlayerId, out float graceUntil) && now < graceUntil) continue;
+
+                            float distance = Vector2.Distance(possibleKiller.transform.position, possibleTarget.transform.position);
+                            if (distance > maxDistance || distance >= bestDistance) continue;
+
+                            bestDistance = distance;
+                            killer = possibleKiller;
+                            target = possibleTarget;
+                        }
+                    }
+                }
+                catch { return false; }
+
+                return killer != null && target != null;
+            }
+
+            private static bool IsReadyShieldBreaker(PlayerControl player)
+            {
+                try
+                {
+                    if (player == null || player.Data == null || player.Data.Disconnected || player.Data.IsDead) return false;
+                    if (!IsImpostorTeamForCooldown(player)) return false;
+                    if (player.Data.Role == null || !player.Data.Role.CanUseKillButton) return false;
+                    if (player.inVent || player.onLadder || player.inMovingPlat) return false;
+                    return GetRemainingKillCooldown(player.PlayerId) <= 0.05f;
+                }
+                catch { return false; }
+            }
+
+            private static bool IsProtectedShieldBreakTarget(PlayerControl killer, PlayerControl target)
+            {
+                try
+                {
+                    if (killer == null || target == null || killer == target) return false;
+                    if (target.Data == null || target.Data.Disconnected || target.Data.IsDead) return false;
+                    if (target.protectedByGuardianId < 0) return false;
+                    if (!target.Visible || target.inVent || target.onLadder || target.inMovingPlat) return false;
+                    if (target.Data.Role == null) return false;
+                    return target.Data.Role.CanBeKilled;
+                }
+                catch { return false; }
+            }
+
+            private static bool TryHostShieldBreakCmdCheckMurder(PlayerControl killer, PlayerControl target)
+            {
+                try
+                {
+                    if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost) return false;
+                    if (killer == null || target == null || killer.NetId == 0 || target.protectedByGuardianId < 0) return false;
+
+                    killer.CmdCheckMurder(target);
+
+                    lastKillTimestamps[killer.PlayerId] = Time.time;
+                    killer.killTimer = Mathf.Max(killer.killTimer, GetConfiguredKillCooldown() * 0.5f);
+                    return true;
+                }
+                catch { return false; }
+            }
+
+            private static void ResetShieldBreakState(string reason)
+            {
+                shieldBreakState = reason;
+                nextShieldBreakAt = 0f;
+                shieldBreakTargetGraceUntil.Clear();
+            }
+
+            private static void PruneShieldBreakTargetGrace(float now)
+            {
+                if (shieldBreakTargetGraceUntil.Count == 0) return;
+
+                List<byte> expired = null;
+                foreach (KeyValuePair<byte, float> pair in shieldBreakTargetGraceUntil)
+                {
+                    if (pair.Value <= now || !IsPlayerStillProtected(pair.Key))
+                    {
+                        if (expired == null) expired = new List<byte>();
+                        expired.Add(pair.Key);
+                    }
+                }
+
+                if (expired == null) return;
+                for (int i = 0; i < expired.Count; i++)
+                    shieldBreakTargetGraceUntil.Remove(expired[i]);
+            }
+
+            private static bool IsPlayerStillProtected(byte playerId)
+            {
+                try
+                {
+                    if (PlayerControl.AllPlayerControls == null) return false;
+                    foreach (PlayerControl player in PlayerControl.AllPlayerControls)
+                    {
+                        if (player != null && player.PlayerId == playerId)
+                            return player.protectedByGuardianId >= 0;
+                    }
+                }
+                catch { }
+                return false;
+            }
+
+            private static string SafePlayerName(PlayerControl player)
+            {
+                try
+                {
+                    string name = player?.Data?.PlayerName;
+                    if (string.IsNullOrWhiteSpace(name)) return "player";
+                    name = name.Replace("\r", " ").Replace("\n", " ").Trim();
+                    return name.Length <= 18 ? name : name.Substring(0, 17) + "...";
+                }
+                catch { return "player"; }
             }
 
             private static void SetState(AutoHostState nextState, string reason)
@@ -690,13 +978,13 @@ public static class ElysiumAutoHostService
                 int minPlayers = ForceMinPlayers;
                 if (ForceLastMinuteEnabled && connectedPlayers >= minPlayers && LobbyLifeRemaining >= 0f && LobbyLifeRemaining <= LastMinuteStartSeconds)
                 {
-                    reason = "Форс-старт: лобби скоро закроется";
+                    reason = "Force start: lobby is closing soon";
                     return true;
                 }
                 int forceAfterMinutes = Mathf.Clamp(ElysiumModMenuGUI.AutoHostForceAfterMinutes, 0, 10);
                 if (forceAfterMinutes > 0 && connectedPlayers >= minPlayers && lobbyOpenedAt > 0f && Time.unscaledTime - lobbyOpenedAt >= forceAfterMinutes * 60f)
                 {
-                    reason = $"Форс-старт: ожидание {forceAfterMinutes} мин";
+                    reason = $"Force start: waited {forceAfterMinutes} min";
                     return true;
                 }
                 reason = string.Empty;
@@ -711,6 +999,7 @@ public static class ElysiumAutoHostService
 
             private static float EffectiveStartDelay(int connectedPlayers)
             {
+                if (AutoRunEnabled) return AutoRunStartDelaySeconds;
                 float delay = StartDelaySeconds;
                 if (IsFastStartActive(connectedPlayers))
                     delay = Mathf.Min(delay, Mathf.Clamp(ElysiumModMenuGUI.AutoHostFastStartDelaySeconds, 0, 60));
@@ -758,7 +1047,8 @@ public static class ElysiumAutoHostService
                 return clean.Length <= 18 ? clean : clean.Substring(0, 17) + "...";
             }
 
-            public static bool IsEnabled => ElysiumModMenuGUI.AutoHostEnabled;
+            public static bool IsEnabled => ElysiumModMenuGUI.AutoHostEnabled || AutoRunEnabled;
+            private static bool AutoRunEnabled => ElysiumModMenuGUI.AutoHostAutoRunEnabled;
             public static bool ShouldReturnAfterMatch => IsEnabled && ElysiumModMenuGUI.AutoReturnLobbyAfterMatch;
             private static bool ForceLastMinuteEnabled => ElysiumModMenuGUI.AutoHostForceLastMinute;
             private static int RequiredPlayers => Mathf.Clamp(ElysiumModMenuGUI.AutoHostMinPlayers, 1, 15);

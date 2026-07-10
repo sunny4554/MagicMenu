@@ -1,4 +1,4 @@
-﻿#nullable disable
+#nullable disable
 #pragma warning disable CS0162, CS0108, CS0219, CS0661, CS0660, CS8632, CS0168, CS0659
 using AmongUs.Data.Player;
 using AmongUs.GameOptions;
@@ -81,7 +81,7 @@ private GUIStyle CreateCompactMenuCardStyle()
 
 private bool DrawCompactToggle(bool value, string text, int width = 0)
         {
-            int finalWidth = Mathf.Max(width > 0 ? width : 168, 128);
+            int finalWidth = width > 0 ? Mathf.Max(width, 44) : 168;
             GUILayout.BeginHorizontal(GUILayout.Width(finalWidth), GUILayout.Height(17));
 
             Rect animSwitchRect = GUILayoutUtility.GetRect(28f, 14f, GUILayout.Width(28f), GUILayout.Height(14f));
@@ -149,11 +149,11 @@ private void OpenExternalLink(string url, string label)
             try
             {
                 Application.OpenURL(url);
-                ShowNotification($"<color=#00FFAA>[LINK]</color> {L("Opening", "Открываю")} <b>{label}</b>");
+                ShowNotification($"<color=#00FFAA>[LINK]</color> Opening <b>{label}</b>");
             }
             catch
             {
-                ShowNotification($"<color=#FF4444>[LINK]</color> {L("Failed to open link.", "Не удалось открыть ссылку.")}");
+                ShowNotification("<color=#FF4444>[LINK]</color> Failed to open link.");
             }
         }
 
@@ -162,11 +162,19 @@ private void DrawUpdateActionButton()
             ElysiumUpdateState state = ElysiumUpdater.State;
             if (state == ElysiumUpdateState.Available)
             {
-                string label = string.IsNullOrEmpty(ElysiumUpdater.LatestVersion)
-                    ? "Download Update"
-                    : $"Download v{ElysiumUpdater.LatestVersion}";
+                bool hasAsset = !string.IsNullOrWhiteSpace(ElysiumUpdater.DownloadUrl);
+                string label = hasAsset
+                    ? (string.IsNullOrEmpty(ElysiumUpdater.LatestVersion) ? "Download Update" : $"Download v{ElysiumUpdater.LatestVersion}")
+                    : "Open Release";
                 if (DrawColoredActionButton(label, new Color32(255, 187, 54, 255), 165f))
-                    ElysiumUpdaterDriver.Instance?.BeginDownload();
+                {
+                    if (hasAsset) ElysiumUpdaterDriver.Instance?.BeginDownload();
+                    else
+                    {
+                        try { GUIUtility.systemCopyBuffer = ElysiumUpdater.ReleasesUrl; } catch { }
+                        OpenExternalLink(ElysiumUpdater.ReleasesUrl, "Releases");
+                    }
+                }
                 return;
             }
 
@@ -200,7 +208,8 @@ private string BuildUpdateStatusText()
                 case ElysiumUpdateState.Checking:
                     return $"<b><color=#FFBB36>{L("Update", "Обновление")}</color></b>: {L("checking GitHub releases...", "проверяю GitHub releases...")}";
                 case ElysiumUpdateState.Available:
-                    return $"<b><color=#FFBB36>{L("Update", "Обновление")}</color></b>: {L("available", "доступно")} <b>v{ElysiumUpdater.LatestVersion}</b> ({ElysiumUpdater.AssetName})";
+                    string asset = string.IsNullOrWhiteSpace(ElysiumUpdater.AssetName) ? "release page" : ElysiumUpdater.AssetName;
+                    return $"<b><color=#FFBB36>{L("Update", "Обновление")}</color></b>: {L("available", "доступно")} <b>v{ElysiumUpdater.LatestVersion}</b> ({asset})";
                 case ElysiumUpdateState.Downloading:
                     return $"<b><color=#FFBB36>{L("Update", "Обновление")}</color></b>: {L("downloading and installing...", "скачивание и установка...")}";
                 case ElysiumUpdateState.Done:
@@ -275,7 +284,7 @@ private void DrawGeneralInfoTab()
                 GUILayout.BeginVertical(boxStyle);
                 GUILayout.Label(
                     $"{L("Welcome to", "Добро пожаловать в")} <b><color=#{accentHex}>ElysiumModMenu</color></b> " +
-                    $"<b><color=#{goldHex}>v{versionText}</color></b> {L("by", "от")} <b><color=#{leadHex}>meowchelo</color></b>!",
+                    $"<b><color=#{goldHex}>v{versionText}</color></b> {L("by", "от")} <b><color=#{leadHex}>Meowchelo</color></b>!",
                     textStyle);
                 GUILayout.Space(4);
                 GUILayout.Label(L(
@@ -288,18 +297,18 @@ private void DrawGeneralInfoTab()
 
                 GUILayout.BeginHorizontal();
                 if (DrawColoredActionButton("GitHub", new Color32(26, 188, 156, 255), 110f))
-                    OpenExternalLink("https://github.com/meowchelo/ElysiumModMenu", "GitHub");
+                    OpenExternalLink("https://github.com/Meowchelo", "GitHub");
                 GUILayout.Space(6);
                 DrawUpdateActionButton();
                 GUILayout.Space(6);
                 if (DrawColoredActionButton("Discord", new Color32(88, 101, 242, 255), 110f))
-                    OpenExternalLink("https://discord.gg/bvwYBZZwUX", "Discord");
+                    OpenExternalLink("https://discord.gg/CdrpKJzFp", "Discord");
                 GUILayout.EndHorizontal();
 
                 GUILayout.Space(8);
                 GUILayout.Label(BuildUpdateStatusText(), textStyle);
-                GUILayout.Label($"{L("Project", "Проект")}: <b><color=#{githubHex}>meowchelo/ElysiumModMenu</color></b>", textStyle);
-                GUILayout.Label($"{L("Main page", "Главная ссылка")}: <color=#{githubHex}>https://github.com/meowchelo/ElysiumModMenu</color>", textStyle);
+                GUILayout.Label($"{L("Project", "Проект")}: <b><color=#{githubHex}>Meowchelo</color></b>", textStyle);
+                GUILayout.Label($"{L("Main page", "Главная ссылка")}: <color=#{githubHex}>https://github.com/Meowchelo</color>", textStyle);
                 GUILayout.Space(8);
                 GUILayout.Label($"{L("ElysiumModMenu is free and open-source software.", "ElysiumModMenu это бесплатный open-source проект.")}", textStyle);
                 GUILayout.Label($"<b><color=#{dangerHex}>{L("If you paid for this menu, demand a refund immediately.", "Если вы заплатили за это меню, требуйте возврат денег сразу.")}</color></b>", textStyle);
@@ -322,8 +331,8 @@ private void DrawGeneralInfoTab()
 
                 GUILayout.Label($"<b><color=#{goldHex}>LEAD DEVELOPER</color></b>", textStyle);
                 GUILayout.Space(4);
-                if (DrawColoredActionButton("meowchelo", new Color32(255, 92, 122, 255), 150f))
-                    OpenExternalLink("https://github.com/meowchelo", "meowchelo");
+                if (DrawColoredActionButton("Meowchelo", new Color32(255, 92, 122, 255), 150f))
+                    OpenExternalLink("https://github.com/Meowchelo", "Meowchelo");
 
                 GUILayout.Space(10);
                 GUILayout.Label($"<b><color=#{devHex}>DEVELOPERS</color></b>", textStyle);
@@ -332,8 +341,8 @@ private void DrawGeneralInfoTab()
                 if (DrawColoredActionButton("Carrot", new Color32(38, 194, 129, 255), 150f))
                     OpenExternalLink("https://github.com/abobanamne", "Carrot");
                 GUILayout.Space(6);
-                if (DrawColoredActionButton("wextikit", new Color32(109, 138, 255, 255), 150f))
-                    OpenExternalLink("https://github.com/wextikit", "wextikit");
+                if (DrawColoredActionButton("Wextikit", new Color32(109, 138, 255, 255), 150f))
+                    OpenExternalLink("https://github.com/Wextikit", "Wextikit");
                 GUILayout.EndHorizontal();
 
                 GUILayout.Space(10);
@@ -347,14 +356,14 @@ private void DrawGeneralInfoTab()
                     "The public source, releases and project updates are published on GitHub.",
                     "Публичный исходный код, релизы и обновления проекта публикуются на GitHub."), textStyle);
                 GUILayout.Space(4);
-                if (DrawColoredActionButton("Open ElysiumModMenu Repository", new Color32(26, 188, 156, 255), 220f))
-                    OpenExternalLink("https://github.com/meowchelo/ElysiumModMenu", "ElysiumModMenu Repository");
+                if (DrawColoredActionButton("Open Meowchelo GitHub", new Color32(26, 188, 156, 255), 220f))
+                    OpenExternalLink("https://github.com/Meowchelo", "Meowchelo GitHub");
 
                 GUILayout.Space(10);
                 GUILayout.Label($"<b><color=#{accentHex}>Found a bug or have a question?</color></b>", textStyle);
                 GUILayout.Space(4);
                 if (DrawColoredActionButton("Join Discord", new Color32(88, 101, 242, 255), 150f))
-                    OpenExternalLink("https://discord.gg/bvwYBZZwUX", "Discord");
+                    OpenExternalLink("https://discord.gg/CdrpKJzFp", "Discord");
 
                 GUILayout.Space(10);
                 GUILayout.Label($"<b><color=#{contributorHex}>{L("Notes", "Примечание")}</color></b>", textStyle);
@@ -415,7 +424,7 @@ private void DrawGeneralInfoTab()
 
 private void DrawSelfTab()
         {
-            float selfContentWidth = Mathf.Clamp(windowRect.width - 190f, 390f, 610f);
+            float selfContentWidth = GetMenuWorkWidth(220f, 610f);
             currentSelfSubTab = Mathf.Clamp(currentSelfSubTab, 0, selfSubTabs.Length - 1);
             GUIStyle compactSubTab = new GUIStyle(subTabStyle) { fontSize = 10, padding = CreateRectOffset(5, 5, 1, 1) };
             GUIStyle compactActiveSubTab = new GUIStyle(activeSubTabStyle) { fontSize = 10, padding = CreateRectOffset(5, 5, 1, 1) };
@@ -989,10 +998,10 @@ private void DrawPlayerMovement()
 
 private void SmartEndGame(string outcome)
         {
-            if (GameManager.Instance == null || AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost) return;
+            if (!CanRunHostEndGameAction(true)) return;
 
             bool isHns = GameManager.Instance.IsHideAndSeek();
-            int reasonCode = 0;
+            int reasonCode = 4;
 
             switch (outcome)
             {

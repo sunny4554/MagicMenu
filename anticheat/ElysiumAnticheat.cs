@@ -160,6 +160,7 @@ public static class ElysiumAnticheat
             public static void Flag(PlayerControl player, string reason)
             {
                 if (player == null || player.Data == null || player == PlayerControl.LocalPlayer) return;
+                if (ElysiumModMenuGUI.IsProtectedFromAnticheat(player)) return;
 
                 string pName = player.Data.PlayerName ?? "Unknown";
 
@@ -307,6 +308,9 @@ public static class ElysiumAnticheat
                             {
                                 try
                                 {
+                                    if (ElysiumModMenuGUI.IsProtectedFromAnticheat(__instance))
+                                        return false;
+
                                     bool qcBan = ElysiumModMenuGUI.banQuickChatEmptySpammer;
                                     string qcName = (__instance.Data != null && !string.IsNullOrEmpty(__instance.Data.PlayerName))
                                         ? __instance.Data.PlayerName : $"Client {__instance.OwnerId}";

@@ -19,6 +19,7 @@ public static class MoreLobbyInfo_GameContainer_SetupGameInfo_Postfix
         public string RoomCode;
         public string Platform;
         public string LobbyTime;
+        public string OriginalInfoText;
     }
 
     private static readonly System.Collections.Generic.List<StyledLobbyName> StyledNames =
@@ -42,17 +43,17 @@ public static class MoreLobbyInfo_GameContainer_SetupGameInfo_Postfix
                 }
 
                 entry.Text.gameObject.SetActive(ElysiumModMenuGUI.moreLobbyInfo);
-                if (!ElysiumModMenuGUI.moreLobbyInfo) continue;
+                if (!ElysiumModMenuGUI.moreLobbyInfo)
+                {
+                    entry.InfoText.text = entry.OriginalInfoText;
+                    continue;
+                }
 
                 string styledName = ElysiumModMenuGUI.rgbMenuMode
                     ? $"<color=#{ElysiumModMenuGUI.GetMenuControlAccentHex()}>{entry.HostName}</color>"
                     : ElysiumModMenuGUI.ApplyMenuShimmer(entry.HostName);
                 entry.Text.text = $"<size=75%><b>{styledName}</b></size>";
 
-                const string separator = "<#0000>000000000000000</color>";
-                entry.InfoText.text = $"<size=38%>{separator}\n{StyleInfo(entry.Capacity)}\n" +
-                                      $"{StyleInfo("Code: " + entry.RoomCode)}\n" +
-                                      $"{StyleInfo(entry.Platform)}\n{StyleInfo(entry.LobbyTime)}\n{separator}</size>";
             }
             catch
             {
@@ -97,7 +98,8 @@ public static class MoreLobbyInfo_GameContainer_SetupGameInfo_Postfix
             Capacity = capacity,
             RoomCode = roomCode,
             Platform = platform,
-            LobbyTime = lobbyTime
+            LobbyTime = lobbyTime,
+            OriginalInfoText = infoText.text
         });
     }
 

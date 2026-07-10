@@ -338,7 +338,7 @@ private void DrawLobbyAllColorSlider()
             if (GUI.Button(applyRect, L("Apply", "Применить"), btnStyle))
             {
                 ApplyColorToLobby(lobbyAllColorId);
-                ShowNotification($"<color=#00FFAA>[LOBBY]</color> {L("Applied lobby color.", "Цвет лобби применен.")}");
+                ShowNotification("<color=#00FFAA>[LOBBY]</color> Applied lobby color.");
             }
         }
 
@@ -415,7 +415,7 @@ private static string GetSafeColorName(int colorId)
 
 private void DrawLobbyControls()
         {
-            float outerContentWidth = Mathf.Max(420f, windowRect.width - 174f);
+            float outerContentWidth = GetMenuWorkWidth(220f, 760f);
             float cardPaddingWidth = menuCardStyle != null && menuCardStyle.padding != null
                 ? menuCardStyle.padding.left + menuCardStyle.padding.right
                 : 28f;
@@ -424,7 +424,7 @@ private void DrawLobbyControls()
             int lobbyControlWidth = Mathf.RoundToInt(Mathf.Max(150f, lobbyColumnWidth - 32f));
             const float hostActionButtonHeight = 24f;
             const float hostActionGap = 4f;
-            const float leftTileHeight = 150f;
+            const float leftTileHeight = 174f;
             const float rightTileHeight = 94f;
 
             GUILayout.BeginHorizontal(GUILayout.Width(outerContentWidth));
@@ -457,6 +457,11 @@ private void DrawLobbyControls()
             {
                 lobbyRainbowAll = false;
             }
+
+            GUILayout.Space(5);
+            bool oldWlOnly = whitelistOnlyLobby;
+            whitelistOnlyLobby = DrawToggle(whitelistOnlyLobby, "White List Only", lobbyControlWidth);
+            if (oldWlOnly != whitelistOnlyLobby) settingsDirty = true;
 
             if (lobbyAllColor)
             {
@@ -523,6 +528,7 @@ private void DrawLobbyControls()
 
             GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(lobbyColumnWidth), GUILayout.Height(rightTileHeight));
             DrawMenuSectionHeader(L("END GAME", "КОНЕЦ ИГРЫ"));
+            disableEndGameSafeMode = DrawToggle(disableEndGameSafeMode, L("Disable Safe End", "Отключить safe end"), Mathf.RoundToInt(lobbyColumnWidth - 12f));
             GUILayout.FlexibleSpace();
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(L("Crewmate Win", "Победа экипажа"), btnStyle, GUILayout.Height(hostActionButtonHeight))) SmartEndGame("CrewWin");
@@ -538,12 +544,10 @@ private void DrawLobbyControls()
             GUILayout.EndHorizontal();
             GUILayout.Space(hostActionGap);
 
-            if (GUILayout.Button(L("Force End", "Завершить"), btnStyle, GUILayout.Height(hostActionButtonHeight)) && GameManager.Instance != null && AmongUsClient.Instance.AmHost)
-            { bool tempNeverEnd = neverEndGame; neverEndGame = false; GameManager.Instance.RpcEndGame((GameOverReason)4, false); neverEndGame = tempNeverEnd; }
+            if (GUILayout.Button(L("Force End", "Завершить"), btnStyle, GUILayout.Height(hostActionButtonHeight))) SmartEndGame("ForceEnd");
             GUILayout.Space(hostActionGap);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(L("Insta Start", "Мгновенный старт"), btnStyle, GUILayout.Height(hostActionButtonHeight)) && GameStartManager.Instance != null)
-            { GameStartManager.Instance.startState = GameStartManager.StartingStates.Countdown; GameStartManager.Instance.countDownTimer = 0f; }
+            if (GUILayout.Button(L("Insta Start", "Мгновенный старт"), btnStyle, GUILayout.Height(hostActionButtonHeight))) TryInstaStartAfterEveryoneLoaded(true);
             GUILayout.Space(hostActionGap);
             if (GUILayout.Button(L("Close Meeting", "Закрыть собрание"), btnStyle, GUILayout.Height(hostActionButtonHeight)) && MeetingHud.Instance != null) MeetingHud.Instance.RpcClose();
             GUILayout.EndHorizontal();
@@ -558,7 +562,7 @@ private static void FloodAllPlayersWithTasks()
         {
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
             {
-                ShowNotification("<color=#FF0000>[TASKS]</color> Нужны права хоста.");
+                ShowNotification("<color=#FF0000>[TASKS]</color> Host required.");
                 return;
             }
 
@@ -586,7 +590,7 @@ private static void DeleteAllPlayerTasks()
         {
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
             {
-                ShowNotification("<color=#FF0000>[TASKS]</color> Нужны права хоста.");
+                ShowNotification("<color=#FF0000>[TASKS]</color> Host required.");
                 return;
             }
 
@@ -844,6 +848,12 @@ public static void InitializeKillCooldownOnRoundStart()
             {
                 try
                 {
+                    if (!ElysiumModMenuGUI.showWatermark)
+                    {
+                        __instance.text.text = "";
+                        return;
+                    }
+
                     _updateTimer += Time.deltaTime;
                     if (_updateTimer >= 0.5f) { _smoothFps = 1f / Time.deltaTime; if (AmongUsClient.Instance != null) _smoothPing = AmongUsClient.Instance.Ping; _updateTimer = 0f; }
                     int num = Mathf.RoundToInt(_smoothFps);
@@ -851,12 +861,8 @@ public static void InitializeKillCooldownOnRoundStart()
 
                     string separator = " <color=#FFFFFF>|</color> ";
                     string finalString = $"<color=#FFFFFF>PING:</color> <color={pingColor}>{_smoothPing} ms</color>{separator}<color=#FFFFFF>FPS:</color> <color=#FFFFFF>{num}</color>";
-
-                    if (ElysiumModMenuGUI.showWatermark)
-                    {
-                        string shimmerTitle = ElysiumModMenuGUI.ApplyMenuShimmer($"ElysiumModMenu v{Plugin.PluginVersion}");
-                        finalString = $"{shimmerTitle}{separator}" + finalString;
-                    }
+                    string shimmerTitle = ElysiumModMenuGUI.ApplyMenuShimmer($"ElysiumModMenu v{Plugin.PluginVersion}");
+                    finalString = $"{shimmerTitle}{separator}" + finalString;
 
                     if (AmongUsClient.Instance != null)
                     {

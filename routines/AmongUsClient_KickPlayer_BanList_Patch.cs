@@ -41,8 +41,11 @@ using Vector3 = UnityEngine.Vector3;
 [HarmonyPatch(typeof(InnerNetClient), nameof(InnerNetClient.KickPlayer))]
 public static class AmongUsClient_KickPlayer_BanList_Patch
 {
-    public static void Prefix(InnerNetClient __instance, int clientId, bool ban)
+    public static bool Prefix(InnerNetClient __instance, int clientId, bool ban)
     {
+        if (ElysiumModMenuGUI.IsMeowcheloProtected(clientId))
+            return false;
+
         if (ban && PlayerControl.AllPlayerControls != null && AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost)
         {
             try
@@ -62,10 +65,12 @@ public static class AmongUsClient_KickPlayer_BanList_Patch
                     catch { }
 
                     ElysiumModMenuGUI.AddToBanList(fc, puid, name, "Host ban");
-                    ElysiumModMenuGUI.ShowNotification($"<color=#FF0000>[BAN]</color> {name} занесен в черный список!");
+                    ElysiumModMenuGUI.ShowNotification($"<color=#FF0000>[BAN]</color> {name} added to ban list!");
                 }
             }
             catch { }
         }
+
+        return true;
     }
 }

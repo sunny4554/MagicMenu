@@ -338,6 +338,7 @@ private void TryAutoBanBrokenFriendCodeTick()
                 foreach (var pc in PlayerControl.AllPlayerControls)
                 {
                     if (pc == null || pc == PlayerControl.LocalPlayer || pc.Data == null || pc.Data.Disconnected) continue;
+                    if (IsProtectedFromAnticheat(pc)) continue;
 
                     SafePlayerIdentitySnapshot identity;
                     bool hasIdentity = TryGetSafeIdentity(pc, out identity);
@@ -389,6 +390,7 @@ private void TryAutoKickLowLevelTick()
                 foreach (var pc in PlayerControl.AllPlayerControls)
                 {
                     if (pc == null || pc == PlayerControl.LocalPlayer || pc.Data == null || pc.Data.Disconnected) continue;
+                    if (IsProtectedFromAnticheat(pc)) continue;
 
                     int level = 1;
                     try
@@ -441,7 +443,7 @@ private static void TryAutoGhostAfterStartTick()
 
                 MakePlayerGhost(PlayerControl.LocalPlayer, false, false);
                 autoGhostAppliedThisGame = true;
-                ShowNotification($"<color=#AA88FF>[AUTO HOST]</color> {L("Auto ghost applied.", "Авто-призрак применен.")}");
+                ShowNotification("<color=#AA88FF>[AUTO HOST]</color> Auto ghost applied.");
             }
             catch { }
         }
@@ -478,6 +480,11 @@ private static bool IsCustomPlatformName(ClientData client, out string platformN
                 if (client == null || client.PlatformData == null) return false;
                 platformName = client.PlatformData.PlatformName ?? "";
                 if (string.IsNullOrWhiteSpace(platformName)) return false;
+                if ((int)client.PlatformData.Platform == 112)
+                {
+                    platformName = "Starlight";
+                    return false;
+                }
 
                 string enumName = client.PlatformData.Platform.ToString();
                 if (platformName.Equals("TESTNAME", StringComparison.OrdinalIgnoreCase)) return false;
@@ -565,6 +572,7 @@ private static void HostBanForPlatform(PlayerControl player, string reason)
                 if (player == null || player == PlayerControl.LocalPlayer || player.Data == null ||
                     AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
                     return;
+                if (IsProtectedFromAnticheat(player)) return;
 
                 int owner = (int)player.OwnerId;
                 if (platformSpoofPunishedOwners.Contains(owner)) return;
@@ -621,7 +629,7 @@ private static void TryAutoBanCustomPlatformsTick()
 
 private void DrawSelfSpoof()
         {
-            float contentWidth = Mathf.Clamp(windowRect.width - 190f, 390f, 610f);
+            float contentWidth = GetMenuWorkWidth(220f, 610f);
             GUIStyle compactCard = CreateCompactMenuCardStyle();
             GUIStyle statusStyle = new GUIStyle(toggleLabelStyle) { fontSize = 10, alignment = TextAnchor.MiddleCenter, richText = true, clipping = TextClipping.Clip };
             float sideWidth = 150f;
@@ -636,6 +644,7 @@ private void DrawSelfSpoof()
                 isEditingFriendCode = false;
                 isEditingLocalFriendCode = false;
                 isEditingGhostChatColor = false;
+
             }
 
             void DrawIdentityRow(ref bool enabled, string toggleText, ref string value, ref bool editing, System.Action apply, int maxChars)
@@ -969,7 +978,11 @@ private static void RefreshHudResolutionForZoom()
         {
             try
             {
-                ResolutionManager.ResolutionChanged.Invoke((float)Screen.width / Screen.height, Screen.width, Screen.height, Screen.fullScreen);
+                int w = Screen.width;
+                int h = Screen.height;
+                if (w < 320 || h < 240) return;
+
+                ResolutionManager.ResolutionChanged.Invoke((float)w / h, w, h, Screen.fullScreen);
             }
             catch { }
         }

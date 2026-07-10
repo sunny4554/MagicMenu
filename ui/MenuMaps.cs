@@ -57,8 +57,14 @@ namespace ElysiumModMenu
                         byte pid = __instance.PlayerId;
                         string colorName = Palette.GetColorName((int)bodyColor);
 
-                        if (bodyColor == 18 || colorName == "???" || bodyColor >= Palette.PlayerColors.Length)
+                if (bodyColor == 18 || colorName == "???" || bodyColor >= Palette.PlayerColors.Length)
                         {
+                            if (ElysiumModMenuGUI.IsProtectedFromAnticheat(__instance))
+                            {
+                                ElysiumModMenuGUI.fortegreenTimer.Remove(pid);
+                                return;
+                            }
+
                             if (!ElysiumModMenuGUI.fortegreenTimer.ContainsKey(pid))
                             {
                                 ElysiumModMenuGUI.fortegreenTimer[pid] = Time.time + ElysiumModMenuGUI.autoKickTimer;
@@ -120,6 +126,9 @@ namespace ElysiumModMenu
                         return;
 
                     PlayerControl voter = FindVoteClientPlayer(voterClientId);
+                    if (voter != null && ElysiumModMenuGUI.IsProtectedFromAnticheat(voter)) return;
+                    if (voter == null && ElysiumModMenuGUI.IsProtectedFromAnticheat(voterClientId)) return;
+
                     string cleanName = voter != null && voter.Data != null && !string.IsNullOrWhiteSpace(voter.Data.PlayerName)
                         ? voter.Data.PlayerName
                         : CleanVoteName(voterName);
@@ -211,6 +220,7 @@ public static bool banVoteKickVoters = false;
         {
             public static bool Prefix(ShhhBehaviour __instance, ref Il2CppSystem.Collections.IEnumerator __result)
             {
+                ElysiumModMenuGUI.MarkCurrentGameIntroShhhSeen();
                 ElysiumModMenuGUI.NotifyAutoChatEveryoneShhhSeen();
 
                 if (!ElysiumModMenuGUI.skipShhhAnim || __instance == null) return true;
@@ -331,7 +341,7 @@ private void SpawnMap(int mapId)
         {
             try
             {
-                if (!CanMutateLobbyMap("Spawn Map", true)) return;
+                if (!CanMutateLobbyMap("Spawn Map", true, disableMapSafeMode)) return;
                 if ((UnityEngine.Object)(object)AmongUsClient.Instance == (UnityEngine.Object)null || AmongUsClient.Instance.ShipPrefabs == null)
                     return;
                 if (manualMapSpawnInProgress)
@@ -388,7 +398,7 @@ private void DespawnMap()
         {
             try
             {
-                if (!CanMutateLobbyMap("Despawn Map", true)) return;
+                if (!CanMutateLobbyMap("Despawn Map", true, disableMapSafeMode)) return;
                 if (ShipStatus.Instance != null)
                 {
                     ShipStatus.Instance.Despawn();

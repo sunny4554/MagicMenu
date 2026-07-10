@@ -68,11 +68,13 @@ private void LoadConfig()
                 rpcSpoofDelay = Plugin.RpcSpoofDelayConfig.Value;
                 currentMenuColorIndex = Plugin.MenuColorIndexConfig.Value;
                 rgbMenuMode = Plugin.RgbMenuModeConfig.Value;
+                rgbTaskBar = LoadBool("M_RgbTaskBar", rgbTaskBar);
                 rgbMenuText = LoadBool("M_RgbMenuText", Plugin.RgbMenuTextConfig.Value);
                 boldMenuText = LoadBool("M_BoldMenuText", Plugin.BoldMenuTextConfig.Value);
                 whiteMenuTheme = LoadBool("M_WhiteTheme", whiteMenuTheme);
                 currentMenuLanguageIndex = Mathf.Clamp(LoadInt("M_MenuLanguageIndex", currentMenuLanguageIndex), 0, menuLanguageNames.Length - 1);
-                fpsLimit = Mathf.Clamp(LoadInt("M_FpsLimit", fpsLimit), 60, 240);
+                limitFps = LoadBool("M_LimitFps", limitFps);
+                fpsLimit = Mathf.Clamp(LoadInt("M_FpsLimit", fpsLimit), 1, 560);
                 autoCopyCodeAndLeave = LoadBool("M_AutoCopyCodeAndLeave", autoCopyCodeAndLeave);
                 blockInnerslothTelemetry = LoadBool("M_BlockInnerslothTelemetry", blockInnerslothTelemetry);
                 ApplyTelemetryPreference();
@@ -81,6 +83,10 @@ private void LoadConfig()
                 if (PlayerPrefs.HasKey("M_AutoKickTimer")) autoKickTimer = PlayerPrefs.GetFloat("M_AutoKickTimer");
                 disableVoteKicks = LoadBool("M_DisableVoteKicks", disableVoteKicks);
                 banVoteKickVoters = LoadBool("M_BanVoteKickVoters", banVoteKickVoters);
+                votekickAutoRejoin = LoadBool("M_VotekickAutoRejoin", votekickAutoRejoin);
+                votekickCopyCode = LoadBool("M_VotekickCopyCode", votekickCopyCode);
+                whitelistOnlyLobby = LoadBool("M_WhitelistOnlyLobby", whitelistOnlyLobby);
+                LoadLobbyWhitelist(PlayerPrefs.GetString("M_LobbyWhitelist", PlayerPrefs.GetString("M_VotekickWhitelist", string.Empty)));
                 enableLocalNameSpoof = LoadBool("M_LocalNameSpoof", enableLocalNameSpoof);
                 enableLocalFriendCodeSpoof = LoadBool("M_LocalFakeFCEnabled", enableLocalFriendCodeSpoof);
                 if (PlayerPrefs.HasKey("M_LocalFakeFC")) localFriendCodeInput = PlayerPrefs.GetString("M_LocalFakeFC");
@@ -167,10 +173,19 @@ private void LoadConfig()
                 unlockVents = LoadBool("M_UnlockVents", unlockVents);
                 walkInVents = LoadBool("M_WalkInVents", walkInVents);
                 allowTasksAsImpostor = LoadBool("M_AllowTasksAsImpostor", allowTasksAsImpostor);
+                hostAutoKillRandom = LoadBool("M_HostAutoKillRandom", hostAutoKillRandom);
+                hostAutoKillTarget = LoadBool("M_HostAutoKillTarget", hostAutoKillTarget);
+                hostAutoKillTargetId = (byte)Mathf.Clamp(LoadInt("M_HostAutoKillTargetId", hostAutoKillTargetId), 0, 255);
+                bugRoomAutoAngel = LoadBool("M_BugRoomAutoAngel", bugRoomAutoAngel);
+                bugRoomAutoKillShield = LoadBool("M_BugRoomAutoKillShield", bugRoomAutoKillShield);
                 killWhileVanishedHostOnly = LoadBool("M_KillWhileVanishedHostOnly", killWhileVanishedHostOnly);
+                disableEndGameSafeMode = LoadBool("M_DisableEndGameSafeMode", disableEndGameSafeMode);
+                disableMapSafeMode = LoadBool("M_DisableMapSafeMode", disableMapSafeMode);
                 roleBuffImmortality = LoadBool("M_RoleBuffImmortality", roleBuffImmortality);
                 neverEndGame = LoadBool("M_NeverEndGame", neverEndGame);
                 removePenalty = LoadBool("M_RemovePenalty", removePenalty);
+                guestExtraFeatures = LoadBool("M_GuestExtraFeatures", guestExtraFeatures);
+                bypassAgeRestrictions = LoadBool("M_BypassAgeRestrictions", bypassAgeRestrictions);
                 alwaysShowLobbyTimer = LoadBool("M_AlwaysShowLobbyTimer", alwaysShowLobbyTimer);
                 autoBanEnabled = LoadBool("M_AutoBanEnabled", autoBanEnabled);
                 allowDuplicateColors = LoadBool("M_AllowDuplicateColors", allowDuplicateColors);
@@ -195,12 +210,15 @@ private void LoadConfig()
                 banQuickChatEmptySpammer = LoadBool("M_BanQuickChatEmptySpammer", banQuickChatEmptySpammer);
                 enableUnownedSpawnGuard = LoadBool("M_UnownedSpawnGuard", enableUnownedSpawnGuard);
                 AutoHostEnabled = LoadBool("M_AutoHostEnabled", AutoHostEnabled);
+                AutoHostShieldBreakEnabled = LoadBool("M_AutoHostShieldBreakEnabled", AutoHostShieldBreakEnabled);
                 AutoReturnLobbyAfterMatch = LoadBool("M_AutoReturnLobbyAfterMatch", AutoReturnLobbyAfterMatch);
                 AutoHostNotifications = LoadBool("M_AutoHostNotifications", AutoHostNotifications);
                 AutoHostForceLastMinute = LoadBool("M_AutoHostForceLastMinute", AutoHostForceLastMinute);
                 AutoHostWaitLoadedPlayers = LoadBool("M_AutoHostWaitLoadedPlayers", AutoHostWaitLoadedPlayers);
                 AutoHostCancelBelowMin = LoadBool("M_AutoHostCancelBelowMin", AutoHostCancelBelowMin);
                 AutoHostInstantStart = LoadBool("M_AutoHostInstantStart", AutoHostInstantStart);
+                AutoHostAutoRunEnabled = LoadBool("M_AutoHostAutoRunEnabled", AutoHostAutoRunEnabled);
+                BugroomScoutEnabled = LoadBool("M_BugroomScoutEnabled", BugroomScoutEnabled);
                 autoGhostAfterStart = LoadBool("M_AutoGhostAfterStart", autoGhostAfterStart);
                 if (PlayerPrefs.HasKey("M_AutoHostMinPlayers")) AutoHostMinPlayers = PlayerPrefs.GetInt("M_AutoHostMinPlayers");
                 if (PlayerPrefs.HasKey("M_AutoHostStartDelaySeconds")) AutoHostStartDelaySeconds = PlayerPrefs.GetFloat("M_AutoHostStartDelaySeconds");
@@ -214,6 +232,7 @@ private void LoadConfig()
                 hardMenu = LoadBool("M_HardMenu", hardMenu);
                 EnableCustomNotifs = LoadBool("M_EnableCustomNotifs", EnableCustomNotifs);
                 LogAllRPCs = LoadBool("M_LogAllRPCs", LogAllRPCs);
+                discordRpcEnabled = LoadBool("M_DiscordRpcEnabled", discordRpcEnabled);
                 selectedSpoofMenuIndex = Mathf.Clamp(LoadInt("M_SelectedSpoofMenuIndex", selectedSpoofMenuIndex), 0, spoofMenuNames.Length - 1);
                 windowRect = new Rect(
                     LoadFloat("M_MenuWindowX", windowRect.x),
@@ -241,7 +260,14 @@ private static void ApplyFpsLimit()
         {
             try
             {
-                fpsLimit = Mathf.Clamp(fpsLimit, 60, 240);
+                if (!limitFps)
+                {
+                    Application.targetFrameRate = -1;
+                    lastAppliedFpsLimit = -1;
+                    return;
+                }
+
+                fpsLimit = Mathf.Clamp(fpsLimit, 1, 560);
                 if (lastAppliedFpsLimit == fpsLimit) return;
                 Application.targetFrameRate = fpsLimit;
                 QualitySettings.vSyncCount = 0;

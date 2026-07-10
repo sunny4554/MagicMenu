@@ -418,6 +418,7 @@ public class PlayerHistoryEntry
             public DateTime LastSeenUtc;
             public DateTime? LeftUtc;
             public bool IsOnline;
+            public List<string> PreviousNames = new List<string>();
             public List<byte> RpcCalls = new List<byte>();
         }
 
@@ -512,11 +513,33 @@ public static bool noTaskMode = false;
 
 public static bool killAuraHostOnly = false;
 
+public static bool hostAutoKillRandom = false;
+
+public static bool hostAutoKillTarget = false;
+
+private static byte hostAutoKillTargetId = byte.MaxValue;
+
+public static bool bugRoomAutoAngel = false;
+
+public static bool bugRoomAutoKillShield = false;
+
 public static bool noKillCooldownHostOnly = false;
+
+public static bool disableEndGameSafeMode = false;
+
+public static bool disableMapSafeMode = false;
 
 public static bool spamReportBodies = false;
 
 private float killAuraTimer = 0f;
+
+private float hostAutoKillTimer = 0f;
+
+private float hostAutoKillTargetTimer = 0f;
+
+private float bugRoomAngelTimer = 0f;
+
+private float bugRoomShieldKillTimer = 0f;
 
 public static bool enableColorCommand = false;
 
@@ -622,7 +645,7 @@ public static float globalRoomColorId = 0f;
 
 private int currentHostOnlySubTab = 0;
 
-private string[] hostOnlySubTabs => new string[] { L("LOBBY CONTROLS", "КОНТРОЛЬ ЛОББИ"), L("ROLE MANAGER", "МЕНЕДЖЕР РОЛЕЙ"), L("ANTI CHEAT", "АНТИ-ЧИТ"), L("AUTO HOST", "АВТО ХОСТ"), L("MAPS", "КАРТЫ") }
+private string[] hostOnlySubTabs => new string[] { L("LOBBY CONTROLS", "КОНТРОЛЬ ЛОББИ"), L("ROLE MANAGER", "МЕНЕДЖЕР РОЛЕЙ"), L("ANTI CHEAT", "АНТИ-ЧИТ"), L("AUTO HOST", "АВТО ХОСТ"), "BUG ROOM", L("MAPS", "КАРТЫ") }
 
 ;
 

@@ -97,12 +97,12 @@ public static class ChatController_AddChat_Patch
                         if (ElysiumModMenuGUI.rainbowPlayers.Contains(sourcePlayer.PlayerId))
                         {
                             ElysiumModMenuGUI.rainbowPlayers.Remove(sourcePlayer.PlayerId);
-                            ElysiumModMenuGUI.ShowNotification("<color=#FF00FF>[SERVER]</color> Радуга ВЫКЛ.");
+                            ElysiumModMenuGUI.ShowNotification("<color=#FF00FF>[SERVER]</color> Rainbow OFF.");
                         }
                         else
                         {
                             ElysiumModMenuGUI.rainbowPlayers.Add(sourcePlayer.PlayerId);
-                            ElysiumModMenuGUI.ShowNotification("<color=#FF00FF>[SERVER]</color> Радуга ВКЛ.");
+                            ElysiumModMenuGUI.ShowNotification("<color=#FF00FF>[SERVER]</color> Rainbow ON.");
                         }
                     }
                 }

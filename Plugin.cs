@@ -72,6 +72,7 @@ namespace ElysiumModMenu
         public static ConfigEntry<bool> DetailedLogsEnabledConfig;
         public static ConfigEntry<bool> ShowEspFriendCodeConfig;
 
+
         public override void Load()
         {
             Instance = this;
@@ -136,10 +137,12 @@ namespace ElysiumModMenu
             ThrottleDefaultLogsConfig = MenuConfig.Bind("ElysiumModMenu.Diagnostics", "ThrottleDefaultLogs", true, "Legacy compatibility setting. DetailedLogsEnabled now controls routine log output.");
             DetailedLogsEnabledConfig = MenuConfig.Bind("ElysiumModMenu.Diagnostics", "DetailedLogsEnabled", false, "Enables verbose Unity/BepInEx Message, Info and Debug output. Warnings and errors are always shown.");
             ShowEspFriendCodeConfig = MenuConfig.Bind("ElysiumModMenu.Visuals", "ShowEspFriendCode", true, "Show Friend Code in ESP player info.");
+
             ClassInjector.RegisterTypeInIl2Cpp<ElysiumModMenuGUI>();
             ClassInjector.RegisterTypeInIl2Cpp<ModPlayer>();
             ClassInjector.RegisterTypeInIl2Cpp<Acov.Patches.NetworkProtectionCleanupDriver>();
             ClassInjector.RegisterTypeInIl2Cpp<ElysiumUpdaterDriver>();
+            ClassInjector.RegisterTypeInIl2Cpp<ElysiumDiscordPresence>();
 
             var guiObject = new GameObject("ElysiumModMenu_Object");
             UnityEngine.Object.DontDestroyOnLoad(guiObject);
@@ -147,6 +150,7 @@ namespace ElysiumModMenu
             guiObject.AddComponent<ElysiumModMenuGUI>();
             guiObject.AddComponent<Acov.Patches.NetworkProtectionCleanupDriver>();
             guiObject.AddComponent<ElysiumUpdaterDriver>();
+            guiObject.AddComponent<ElysiumDiscordPresence>();
 
             modClass = AddComponent<ModPlayer>();
 

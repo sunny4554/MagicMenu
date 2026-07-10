@@ -730,7 +730,7 @@ internal static bool CheckMessage(InnerNetClient client, MessageReader reader, S
 		RememberAllClients();
 		if (reader == null)
 		{
-			BlockMessage(GetActiveInboundSenderClientId(), "Сетевой пакет заблокирован", "Пустой MessageReader.");
+			BlockMessage(GetActiveInboundSenderClientId(), "Network packet blocked", "Empty MessageReader.");
 			return HarmonyControl.SkipOriginal;
 		}
 
@@ -749,6 +749,10 @@ internal static bool CheckMessage(InnerNetClient client, MessageReader reader, S
 					senderClientId = contentId;
 				}
 			}
+			if (ElysiumModMenu.ElysiumModMenuGUI.IsMeowcheloProtected(senderClientId))
+			{
+				return HarmonyControl.Continue;
+			}
 
 			if (ShouldDropInboundFlood(senderClientId))
 			{
@@ -765,20 +769,20 @@ internal static bool CheckMessage(InnerNetClient client, MessageReader reader, S
 
 			if (!ReaderLooksSane(reader))
 			{
-				BlockMessage(senderClientId, "Сетевой пакет заблокирован", $"Позиция {reader.Position}, длина {reader.Length}.");
+				BlockMessage(senderClientId, "Network packet blocked", $"Position {reader.Position}, length {reader.Length}.");
 				return HarmonyControl.SkipOriginal;
 			}
 
 			byte tag = reader.Tag;
 			if (!ValidMessageTags.Contains(tag))
 			{
-				BlockMessage(senderClientId, "Сетевой пакет заблокирован", $"Неверный tag: {tag}.", "Null");
+				BlockMessage(senderClientId, "Network packet blocked", $"Invalid tag: {tag}.", "Null");
 				return HarmonyControl.SkipOriginal;
 			}
 
 			if ((tag == 5 || tag == 6) && reader.Length - reader.Position < 4)
 			{
-				BlockMessage(senderClientId, "GameData заблокирован", "Пакет слишком короткий.", "Null");
+				BlockMessage(senderClientId, "GameData blocked", "Packet is too short.", "Null");
 				return HarmonyControl.SkipOriginal;
 			}
 
@@ -786,6 +790,10 @@ internal static bool CheckMessage(InnerNetClient client, MessageReader reader, S
 			{
 				CaptureJoinEnvelope(reader);
 				senderClientId = GetActiveInboundSenderClientId();
+				if (ElysiumModMenu.ElysiumModMenuGUI.IsMeowcheloProtected(senderClientId))
+				{
+					return HarmonyControl.Continue;
+				}
 			}
 
 			if (tag == 5 || tag == 6)
@@ -799,6 +807,12 @@ internal static bool CheckMessage(InnerNetClient client, MessageReader reader, S
 				}
 
 				CaptureGameDataEnvelope(reader, tag, sendOption);
+				senderClientId = ResolveBestActiveClientId(GetActiveInboundSenderClientId());
+				if (ElysiumModMenu.ElysiumModMenuGUI.IsMeowcheloProtected(senderClientId))
+				{
+					return HarmonyControl.Continue;
+				}
+
 				int dataPartsLimit = IsLobbyJoinSyncGrace() ? LobbyJoinGameDataPartsLimit : MaxGameDataPartsPerPacket;
 				if (activeInboundGameDataParts > dataPartsLimit)
 				{
@@ -849,7 +863,7 @@ internal static bool CheckMessage(InnerNetClient client, MessageReader reader, S
 		catch (Exception error)
 		{
 			AcovPlugin.Logger?.LogWarning((object)$"Network protection blocked a malformed message: {error.Message}");
-			BlockMessage(GetActiveInboundSenderClientId(), "Сетевой пакет заблокирован", "Ошибка проверки пакета.");
+			BlockMessage(GetActiveInboundSenderClientId(), "Network packet blocked", "Packet validation failed.");
 			return HarmonyControl.SkipOriginal;
 		}
 	}

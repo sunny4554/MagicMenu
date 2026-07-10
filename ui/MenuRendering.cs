@@ -44,7 +44,7 @@ namespace ElysiumModMenu
     {
 private void DrawSabotageAnimationTab()
         {
-            float tabWidth = Mathf.Max(420f, windowRect.width - 174f);
+            float tabWidth = GetMenuWorkWidth(180f, 760f);
             GUILayout.BeginHorizontal(GUILayout.Width(tabWidth), GUILayout.Height(24));
             for (int i = 0; i < sabotageSubTabs.Length; i++)
             {
@@ -66,94 +66,111 @@ private void DrawSabotagesTab()
         {
             GUIStyle miniLabelStyle = new GUIStyle(toggleLabelStyle) { fontSize = 11, richText = true, wordWrap = true };
             miniLabelStyle.normal.textColor = whiteMenuTheme ? new Color(0.25f, 0.25f, 0.25f, 1f) : new Color(0.72f, 0.72f, 0.72f, 1f);
-            float outerContentWidth = Mathf.Max(420f, windowRect.width - 174f);
+            float outerContentWidth = Mathf.Floor(Mathf.Max(130f, GetMenuWorkWidth(150f, 760f) - 44f));
             float cardPaddingWidth = menuCardStyle != null && menuCardStyle.padding != null
                 ? menuCardStyle.padding.left + menuCardStyle.padding.right
                 : 28f;
-            bool compactLayout = outerContentWidth < 560f;
-            float columnGap = compactLayout ? 8f : 10f;
-            float availableColumnWidth = Mathf.Max(340f, outerContentWidth - columnGap);
-            float sabotageColumnWidth = compactLayout ? Mathf.Min(226f, availableColumnWidth * 0.48f) : Mathf.Min(276f, availableColumnWidth * 0.52f);
-            float doorColumnWidth = availableColumnWidth - sabotageColumnWidth;
-            if (doorColumnWidth < 190f)
-            {
-                doorColumnWidth = 190f;
-                sabotageColumnWidth = Mathf.Max(170f, availableColumnWidth - doorColumnWidth);
-            }
+            bool compactLayout = outerContentWidth < 340f;
+            float columnGap = 10f;
+            float sabotageColumnWidth = compactLayout ? outerContentWidth : Mathf.Floor((outerContentWidth - columnGap) * 0.5f);
+            float doorColumnWidth = compactLayout ? outerContentWidth : outerContentWidth - columnGap - sabotageColumnWidth;
 
-            float sabotageInnerWidth = Mathf.Max(150f, sabotageColumnWidth - cardPaddingWidth - 4f);
-            float doorInnerWidth = Mathf.Max(150f, doorColumnWidth - cardPaddingWidth - 4f);
-            float criticalButtonWidth = Mathf.Floor(Mathf.Max(68f, (sabotageInnerWidth - 6f) / 2f));
-            float sabotageToggleButtonWidth = Mathf.Floor(Mathf.Max(66f, (sabotageInnerWidth - 6f) / 2f));
-            float globalDoorButtonWidth = Mathf.Floor(Mathf.Max(42f, (doorInnerWidth - 12f) / 3f));
-            int ventToggleWidth = Mathf.RoundToInt(Mathf.Max(140f, doorInnerWidth));
-            float availableHeight = Mathf.Max(300f, windowRect.height - 92f);
-            float doorListHeight = Mathf.Max(120f, availableHeight - 170f);
+            float sabotageInnerWidth = Mathf.Max(compactLayout ? 84f : 118f, sabotageColumnWidth - cardPaddingWidth - 4f);
+            float doorInnerWidth = Mathf.Max(compactLayout ? 84f : 118f, doorColumnWidth - cardPaddingWidth - 10f);
+            float doorListWidth = Mathf.Max(72f, doorInnerWidth - 8f);
+            float sabotagePairGap = 4f;
+            float sabotageHalfWidth = Mathf.Floor((sabotageInnerWidth - sabotagePairGap) * 0.5f);
+            float doorPairWidth = Mathf.Floor((doorInnerWidth - 6f) * 0.5f);
+            int ventToggleWidth = Mathf.RoundToInt(Mathf.Max(compactLayout ? 48f : 70f, (sabotageInnerWidth - 6f) * 0.5f));
+            float actionH = 24f;
+            float criticalH = 82f;
+            float systemsH = 142f;
+            float doorActionsH = 102f;
+            bool hasDoors = ShipStatus.Instance != null && ShipStatus.Instance.AllDoors != null;
+            float doorListHeight = hasDoors
+                ? Mathf.Clamp(windowRect.height - 330f, 72f, 150f)
+                : 86f;
 
-            GUILayout.BeginHorizontal(GUILayout.Width(outerContentWidth));
+            if (compactLayout) GUILayout.BeginVertical(GUILayout.Width(outerContentWidth));
+            else GUILayout.BeginHorizontal(GUILayout.Width(outerContentWidth));
 
-            GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(sabotageColumnWidth), GUILayout.ExpandHeight(true));
+            GUILayout.BeginVertical(GUILayout.Width(sabotageColumnWidth));
+            GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(sabotageColumnWidth), GUILayout.Height(criticalH));
             DrawMenuSectionHeader("CRITICAL SABOTAGES");
-            GUILayout.Space(3);
-
-            GUILayout.BeginHorizontal();
-            if (DrawColoredActionButton("FIX ALL", new Color32(83, 231, 139, 255), criticalButtonWidth, 30f, true)) FixAllSabotages();
-            GUILayout.Space(6);
-            if (DrawColoredActionButton("TRIGGER ALL", new Color32(255, 74, 74, 255), criticalButtonWidth, 30f, true)) TriggerAllSabotages();
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(5);
-            if (GUILayout.Button("CALL MEETING", btnStyle, GUILayout.Height(28))) callMeetingPublic();
-            GUILayout.Space(5);
-            if (GUILayout.Button("SABOTAGE MAP", btnStyle, GUILayout.Height(28))) OpenSabotageMap();
-
-            GUILayout.Space(6);
-            GUILayout.BeginHorizontal();
-            DrawSabotageButton("Reactor", ref reactorSab, ToggleReactor, new Color32(255, 84, 84, 255), sabotageToggleButtonWidth);
-            GUILayout.Space(6);
-            DrawSabotageButton("Oxygen", ref oxygenSab, ToggleO2, new Color32(255, 132, 54, 255), sabotageToggleButtonWidth);
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(5);
-            GUILayout.BeginHorizontal();
-            DrawSabotageButton("Comms", ref commsSab, ToggleComms, new Color32(66, 205, 128, 255), sabotageToggleButtonWidth);
-            GUILayout.Space(6);
-            DrawSabotageButton("Lights", ref elecSab, ToggleLights, new Color32(255, 218, 77, 255), sabotageToggleButtonWidth);
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(5);
-            DrawSabotageButton("Unfixable Lights", ref unfixableLights, ToggleUnfixableLights, new Color32(210, 128, 255, 255), sabotageInnerWidth);
-
-            GUILayout.Space(6);
-            if (GUILayout.Button("MUSHROOM MIXUP", btnStyle, GUILayout.Height(26))) SabotageMushroom();
             GUILayout.FlexibleSpace();
+            GUILayout.BeginHorizontal(GUILayout.Width(sabotageInnerWidth));
+            if (DrawColoredActionButton("FIX ALL", new Color32(83, 231, 139, 255), sabotageHalfWidth, actionH, true)) FixAllSabotages();
+            GUILayout.Space(sabotagePairGap);
+            if (DrawColoredActionButton("TRIGGER ALL", new Color32(255, 74, 74, 255), sabotageHalfWidth, actionH, true)) TriggerAllSabotages();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(sabotagePairGap);
+
+            GUILayout.BeginHorizontal(GUILayout.Width(sabotageInnerWidth));
+            if (GUILayout.Button("MEETING", btnStyle, GUILayout.Width(sabotageHalfWidth), GUILayout.Height(actionH))) callMeetingPublic();
+            GUILayout.Space(sabotagePairGap);
+            if (GUILayout.Button("MAP", btnStyle, GUILayout.Width(sabotageHalfWidth), GUILayout.Height(actionH))) OpenSabotageMap();
+            GUILayout.EndHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.EndVertical();
+
+            GUILayout.Space(6);
+            GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(sabotageColumnWidth), GUILayout.Height(systemsH));
+            DrawMenuSectionHeader("SYSTEMS");
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginHorizontal(GUILayout.Width(sabotageInnerWidth));
+            DrawSabotageButton("Reactor", ref reactorSab, ToggleReactor, new Color32(255, 84, 84, 255), sabotageHalfWidth, actionH);
+            GUILayout.Space(sabotagePairGap);
+            DrawSabotageButton("Oxygen", ref oxygenSab, ToggleO2, new Color32(255, 132, 54, 255), sabotageHalfWidth, actionH);
+            GUILayout.EndHorizontal();
+            GUILayout.Space(4);
+
+            GUILayout.BeginHorizontal(GUILayout.Width(sabotageInnerWidth));
+            DrawSabotageButton("Comms", ref commsSab, ToggleComms, new Color32(66, 205, 128, 255), sabotageHalfWidth, actionH);
+            GUILayout.Space(sabotagePairGap);
+            DrawSabotageButton("Lights", ref elecSab, ToggleLights, new Color32(255, 218, 77, 255), sabotageHalfWidth, actionH);
+            GUILayout.EndHorizontal();
+            GUILayout.Space(4);
+
+            GUILayout.BeginHorizontal(GUILayout.Width(sabotageInnerWidth));
+            DrawSabotageButton("Bad Lights", ref unfixableLights, ToggleUnfixableLights, new Color32(210, 128, 255, 255), sabotageHalfWidth, actionH);
+            GUILayout.Space(sabotagePairGap);
+            if (GUILayout.Button("MUSHROOM", btnStyle, GUILayout.Width(sabotageHalfWidth), GUILayout.Height(actionH))) SabotageMushroom();
+            GUILayout.EndHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.EndVertical();
+
+            GUILayout.Space(6);
+            GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(sabotageColumnWidth), GUILayout.Height(62f));
+            DrawMenuSectionHeader("VENTS");
+            GUILayout.FlexibleSpace();
+            unlockVents = DrawCompactToggle(unlockVents, "Unlock Vents", Mathf.RoundToInt(sabotageInnerWidth));
+            GUILayout.Space(2);
+            walkInVents = DrawCompactToggle(walkInVents, "Walk In Vents", Mathf.RoundToInt(sabotageInnerWidth));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndVertical();
             GUILayout.EndVertical();
 
             GUILayout.Space(columnGap);
 
-            GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(doorColumnWidth), GUILayout.ExpandHeight(true));
+            GUILayout.BeginVertical(GUILayout.Width(doorColumnWidth));
+            GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(doorColumnWidth), GUILayout.Height(doorActionsH));
             DrawMenuSectionHeader("DOOR LOCKDOWN");
-            GUILayout.Space(4);
-            GUILayout.Label("<b>Global controls</b>", miniLabelStyle);
-
-            GUILayout.BeginHorizontal();
-            if (DrawColoredActionButton("CLOSE", new Color32(255, 106, 66, 255), globalDoorButtonWidth, 30f, true)) SabotageDoors();
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginHorizontal(GUILayout.Width(doorInnerWidth));
+            if (DrawColoredActionButton("OPEN", new Color32(89, 219, 146, 255), doorPairWidth, actionH, true)) OpenAllDoors();
             GUILayout.Space(6);
-            if (DrawColoredActionButton("LOCK", new Color32(255, 184, 64, 255), globalDoorButtonWidth, 30f, true)) LockAllDoors();
-            GUILayout.Space(6);
-            if (DrawColoredActionButton("OPEN", new Color32(89, 219, 146, 255), globalDoorButtonWidth, 30f, true)) OpenAllDoors();
+            if (DrawColoredActionButton("CLOSE", new Color32(255, 106, 66, 255), doorPairWidth, actionH, true)) SabotageDoors();
             GUILayout.EndHorizontal();
+            GUILayout.Space(4);
+            if (DrawColoredActionButton("LOCK ALL", new Color32(255, 184, 64, 255), doorInnerWidth, actionH, true)) LockAllDoors();
+            GUILayout.FlexibleSpace();
+            GUILayout.EndVertical();
 
             GUILayout.Space(6);
-            DrawMenuSectionHeader("VENTS");
-            unlockVents = DrawToggle(unlockVents, "Unlock Vents", ventToggleWidth);
-            GUILayout.Space(3);
-            walkInVents = DrawToggle(walkInVents, "Walk In Vents", ventToggleWidth);
+            GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(doorColumnWidth), GUILayout.Height(doorListHeight + 24f));
+            DrawMenuSectionHeader("DOOR TARGETS");
 
-            GUILayout.Space(6);
-            GUILayout.Label("<b>Target doors</b>", miniLabelStyle);
-
-            if (ShipStatus.Instance != null && ShipStatus.Instance.AllDoors != null)
+            if (hasDoors)
             {
                 var rooms = ShipStatus.Instance.AllDoors
                     .Where(d => d != null)
@@ -162,11 +179,11 @@ private void DrawSabotagesTab()
                     .OrderBy(r => r.ToString())
                     .ToList();
 
-                doorsScrollPos = GUILayout.BeginScrollView(doorsScrollPos, false, true, GUILayout.Height(doorListHeight));
+                doorsScrollPos = GUILayout.BeginScrollView(doorsScrollPos, false, false, GUILayout.Width(doorInnerWidth - 2f), GUILayout.Height(doorListHeight));
                 foreach (var room in rooms)
                 {
-                    DrawDoorTargetRow(room, doorColumnWidth - 46f);
-                    GUILayout.Space(3);
+                    DrawDoorTargetRow(room, doorListWidth);
+                    GUILayout.Space(2);
                 }
                 GUILayout.EndScrollView();
             }
@@ -177,8 +194,10 @@ private void DrawSabotagesTab()
                 GUILayout.FlexibleSpace();
             }
             GUILayout.EndVertical();
+            GUILayout.EndVertical();
 
-            GUILayout.EndHorizontal();
+            if (compactLayout) GUILayout.EndVertical();
+            else GUILayout.EndHorizontal();
         }
 
 private void OpenSabotageMap()
@@ -253,15 +272,15 @@ private bool DrawCustomRpcInputButton(float width)
             return clicked;
         }
 
-private void DrawSabotageButton(string label, ref bool state, Action<bool> toggleAction, Color accent, float width = 0f)
+private void DrawSabotageButton(string label, ref bool state, Action<bool> toggleAction, Color accent, float width = 0f, float height = 30f)
         {
             GUIStyle style = CreateClippedButtonStyle(state ? activeTabStyle : btnStyle);
             Color oldBackground = GUI.backgroundColor;
             GUI.backgroundColor = state ? accent : Color.white;
 
             GUILayoutOption[] options = width > 0f
-                ? new[] { GUILayout.Width(width), GUILayout.Height(30) }
-                : new[] { GUILayout.Height(30) };
+                ? new[] { GUILayout.Width(width), GUILayout.Height(height) }
+                : new[] { GUILayout.Height(height) };
             if (GUILayout.Button(state ? label + "  ON" : label, style, options))
             {
                 state = !state;
@@ -273,44 +292,68 @@ private void DrawSabotageButton(string label, ref bool state, Action<bool> toggl
 
 private void DrawDoorTargetRow(SystemTypes room, float rowContentWidth)
         {
-            GUILayout.BeginHorizontal(boxStyle);
-            float buttonWidth = Mathf.Clamp((rowContentWidth - 74f) / 3f, 34f, 42f);
-            float labelWidth = Mathf.Clamp(rowContentWidth - (buttonWidth * 3f) - 14f, 58f, 86f);
+            GUIStyle rowStyle = new GUIStyle(boxStyle);
+            rowStyle.padding.left = 3;
+            rowStyle.padding.right = 3;
+            rowStyle.padding.top = 1;
+            rowStyle.padding.bottom = 1;
+            GUILayout.BeginHorizontal(rowStyle, GUILayout.Width(rowContentWidth), GUILayout.Height(22));
+            int cnt = 0;
+            try
+            {
+                if (ShipStatus.Instance != null && ShipStatus.Instance.AllDoors != null)
+                {
+                    foreach (var door in ShipStatus.Instance.AllDoors)
+                        if (door != null && door.Room == room) cnt++;
+                }
+            }
+            catch { }
+
             GUIStyle doorNameStyle = new GUIStyle(toggleLabelStyle)
             {
                 clipping = TextClipping.Clip,
                 wordWrap = false,
                 fontSize = 11
             };
-            GUILayout.Label($"<b>{room}</b>", doorNameStyle, GUILayout.Width(labelWidth));
-            GUILayout.FlexibleSpace();
+            float buttonGap = 2f;
+            float buttonWidth = rowContentWidth < 130f ? 24f : (rowContentWidth < 150f ? 28f : 34f);
+            float labelWidth = Mathf.Max(24f, rowContentWidth - (buttonWidth * 3f) - (buttonGap * 3f) - 14f);
+            GUILayout.Label(cnt > 0 ? $"<b>{room}</b> <color=#888888>x{cnt}</color>" : $"<b>{room}</b>", doorNameStyle, GUILayout.Width(labelWidth), GUILayout.Height(20));
 
-            if (GUILayout.Button("Close", btnStyle, GUILayout.Width(buttonWidth), GUILayout.Height(24))) CloseDoorsOfType(room);
-            GUILayout.Space(4);
-            if (GUILayout.Button("Lock", activeSubTabStyle, GUILayout.Width(buttonWidth), GUILayout.Height(24))) LockDoorsOfType(room);
-            GUILayout.Space(4);
-            if (GUILayout.Button("Open", btnStyle, GUILayout.Width(buttonWidth), GUILayout.Height(24))) OpenDoorsOfType(room);
+            if (GUILayout.Button("O", btnStyle, GUILayout.Width(buttonWidth), GUILayout.Height(20))) OpenDoorsOfType(room);
+            GUILayout.Space(buttonGap);
+            if (GUILayout.Button("L", activeSubTabStyle, GUILayout.Width(buttonWidth), GUILayout.Height(20))) LockDoorsOfType(room);
+            GUILayout.Space(buttonGap);
+            if (GUILayout.Button("C", btnStyle, GUILayout.Width(buttonWidth), GUILayout.Height(20))) CloseDoorsOfType(room);
 
             GUILayout.EndHorizontal();
         }
 
 private void callMeetingPublic()
         {
-            if (PlayerControl.LocalPlayer == null || PlayerControl.AllPlayerControls == null) return;
+            if (PlayerControl.LocalPlayer == null) return;
             try
             {
-                foreach (var pc in PlayerControl.AllPlayerControls)
+                if (AmongUsClient.Instance == null || !AmongUsClient.Instance.IsGameStarted || LobbyBehaviour.Instance != null || ShipStatus.Instance == null)
                 {
-                    if (pc != null && pc.Data != null && pc.Data.IsDead && !pc.Data.Disconnected)
-                    {
-                        PlayerControl.LocalPlayer.CmdReportDeadBody(pc.Data);
-                        ShowNotification($"<color=#00FF00>[MEETING]</color> Найден и зарепорчен труп: <b>{pc.Data.PlayerName}</b>!");
-                        return;
-                    }
+                    ShowNotification("<color=#FF0000>[MEETING]</color> Match must be started.");
+                    return;
+                }
+
+                if (MeetingHud.Instance != null || ExileController.Instance != null || IntroCutscene.Instance != null)
+                {
+                    ShowNotification("<color=#FFAA00>[MEETING]</color> Meeting/exile/intro is already active.");
+                    return;
+                }
+
+                if (PlayerControl.LocalPlayer.Data != null && PlayerControl.LocalPlayer.Data.IsDead)
+                {
+                    ShowNotification("<color=#FF0000>[MEETING]</color> Local player is dead.");
+                    return;
                 }
 
                 PlayerControl.LocalPlayer.CmdReportDeadBody(null);
-                ShowNotification("<color=#00FF00>[MEETING]</color> Легально нажата кнопка собрания!");
+                ShowNotification("<color=#00FF00>[MEETING]</color> Meeting called.");
             }
             catch { }
         }
@@ -330,7 +373,7 @@ private void TriggerAllSabotages()
                 ToggleComms(true);
                 ToggleLights(true);
 
-                ShowNotification("<color=#FF0000>[SABOTAGE]</color> Все системы саботированы!");
+                ShowNotification("<color=#FF0000>[SABOTAGE]</color> All systems sabotaged!");
             }
             catch { }
         }
@@ -362,7 +405,7 @@ private void FixAllSabotages()
                     }
                 }
                 try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.MushroomMixupSabotage, 0); } catch { }
-                ShowNotification("<color=#00FF00>[SABOTAGE]</color> Все саботажи и двери починены!");
+                ShowNotification("<color=#00FF00>[SABOTAGE]</color> All sabotages and doors fixed!");
             }
             catch { }
         }
@@ -385,7 +428,7 @@ private void SabotageDoors()
                 {
                     try { ShipStatus.Instance.RpcCloseDoorsOfType(room); } catch { }
                 }
-                ShowNotification("<color=#FF0000>[DOORS]</color> Сигнал на закрытие отправлен!");
+                ShowNotification("<color=#FF0000>[DOORS]</color> Close signal sent!");
             }
             catch { }
         }
@@ -461,7 +504,7 @@ private void LockAllDoors()
                 foreach (var room in rooms)
                     ShipStatus.Instance.RpcCloseDoorsOfType(room);
 
-                ShowNotification("<color=#FFB840>[DOORS]</color> Все двери залочены!");
+                ShowNotification("<color=#FFB840>[DOORS]</color> All doors locked!");
             }
             catch { }
         }
@@ -479,7 +522,7 @@ private void OpenAllDoors()
                         try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, (byte)(door.Id | 64)); } catch { }
                     }
                 }
-                ShowNotification("<color=#00FF00>[DOORS]</color> Все двери открыты!");
+                ShowNotification("<color=#00FF00>[DOORS]</color> All doors opened!");
             }
             catch { }
         }
@@ -943,6 +986,16 @@ private void DrawMenuTab()
             GUILayout.Label(L("Smoothly cycles the accent through the rainbow.", "Плавно переливает акцент по радуге."), menuDescStyle);
             GUILayout.Space(8);
 
+            bool prevRgbTaskBar = rgbTaskBar;
+            rgbTaskBar = DrawToggle(rgbTaskBar, "RGB Task Bar", 260);
+            if (prevRgbTaskBar != rgbTaskBar)
+            {
+                if (!rgbTaskBar) RestoreRgbTaskBar();
+                menuPrefsChanged = true;
+            }
+            GUILayout.Label("Recolors the in-game task progress bar.", menuDescStyle);
+            GUILayout.Space(8);
+
             bool prevRgbText = rgbMenuText;
             rgbMenuText = DrawToggle(rgbMenuText, "RGB Text", 260);
             if (prevRgbText != rgbMenuText)
@@ -983,6 +1036,12 @@ private void DrawMenuTab()
             GUILayout.Label(L("Put 'MenuBG.png' or .jpg in BepInEx/config to add a background image.", "Положите 'MenuBG.png' или .jpg в BepInEx/config для фона."), menuDescStyle);
             GUILayout.Space(8);
 
+            bool prevWatermark = showWatermark;
+            showWatermark = DrawToggle(showWatermark, L("Show Watermark", "Показывать вотермарк"), 260);
+            if (prevWatermark != showWatermark) menuPrefsChanged = true;
+            GUILayout.Label(L("Shows the ElysiumModMenu watermark near ping and FPS.", "Показывает вотермарк ElysiumModMenu рядом с ping и FPS."), menuDescStyle);
+            GUILayout.Space(8);
+
             bool prevHardMenu = hardMenu;
             hardMenu = DrawToggle(hardMenu, L("Solid Menu (block game clicks)", "Твердое меню (блок кликов по игре)"), 260);
             if (prevHardMenu != hardMenu) menuPrefsChanged = true;
@@ -1008,7 +1067,19 @@ private void DrawMenuTab()
             bool previousRemovePenalty = removePenalty;
             removePenalty = DrawToggle(removePenalty, "No Disconnect Penalty", 260);
             if (previousRemovePenalty != removePenalty) menuPrefsChanged = true;
-            GUILayout.Label("Prevents the matchmaking cooldown caused by leaving or disconnecting from an online lobby.", menuDescStyle);
+            GUILayout.Label("Prevents matchmaking cooldown when leaving or disconnecting.", menuDescStyle);
+            GUILayout.Space(8);
+
+            bool prevGuestExtra = guestExtraFeatures;
+            guestExtraFeatures = DrawToggle(guestExtraFeatures, L("Guest Extra Features", "Доп. функции гостю"), 260);
+            if (prevGuestExtra != guestExtraFeatures) menuPrefsChanged = true;
+            GUILayout.Label(L("Opens client-side free chat, friend list and custom name checks for guest accounts.", "Открывает локальные проверки free chat, списка друзей и своего ника для guest."), menuDescStyle);
+            GUILayout.Space(8);
+
+            bool prevAgeBypass = bypassAgeRestrictions;
+            bypassAgeRestrictions = DrawToggle(bypassAgeRestrictions, L("Bypass Age Restrictions", "Обход возрастных ограничений"), 280);
+            if (prevAgeBypass != bypassAgeRestrictions) menuPrefsChanged = true;
+            GUILayout.Label(L("Ignores client-side minor/waiting checks and online lock where the game asks locally.", "Игнорирует локальные проверки minor/waiting и локальный запрет онлайна."), menuDescStyle);
             GUILayout.Space(8);
 
             bool previousUnlockAll = unlockCosmetics;
@@ -1030,18 +1101,52 @@ private void DrawMenuTab()
             GUILayout.EndVertical();
 
             GUILayout.BeginVertical(menuCardStyle);
+            DrawMenuSectionHeader("PANIC");
+            GUILayout.Label("Turns off menu flags, hides the watermark and unpatches Harmony until restart.", menuDescStyle);
+            GUILayout.Space(6);
+            GUI.backgroundColor = new Color(0.85f, 0.12f, 0.10f, 1f);
+            if (GUILayout.Button("PANIC MODE", btnStyle, GUILayout.Height(30), GUILayout.Width(180)))
+                ApplyPanicMode();
+            GUI.backgroundColor = Color.white;
+            GUILayout.EndVertical();
+
+            GUILayout.BeginVertical(menuCardStyle);
             DrawMenuSectionHeader(L("ACCENT & PERFORMANCE", "АКЦЕНТ И ПРОИЗВОДИТЕЛЬНОСТЬ"));
 
+            bool prevLimitFps = limitFps;
+            limitFps = DrawToggle(limitFps, L("Limit FPS", "Ограничивать FPS"), 260);
+            if (prevLimitFps != limitFps)
+            {
+                ApplyFpsLimit();
+                menuPrefsChanged = true;
+            }
+            GUILayout.Space(6);
+
             GUILayout.BeginHorizontal();
+            GUI.enabled = limitFps;
             GUILayout.Label(L("FPS Limit", "Лимит FPS"), new GUIStyle(toggleLabelStyle), GUILayout.Height(25), GUILayout.Width(110));
-            int newFpsLimit = Mathf.Clamp((int)GUILayout.HorizontalSlider(fpsLimit, 60f, 240f, sliderStyle, sliderThumbStyle, GUILayout.Width(180)), 60, 240);
+            int newFpsLimit = Mathf.Clamp((int)GUILayout.HorizontalSlider(fpsLimit, 1f, 560f, sliderStyle, sliderThumbStyle, GUILayout.Width(180)), 1, 560);
             GUILayout.Space(10);
-            GUILayout.Label(fpsLimit.ToString(), menuBadgeStyle, GUILayout.Width(52), GUILayout.Height(22));
+            if (!isEditingFpsLimit) fpsLimitInput = fpsLimit.ToString();
+            if (DrawFpsLimitInput())
+            {
+                isEditingFpsLimit = true;
+                fpsLimitInput = string.Empty;
+                isEditingName = false;
+                isEditingLevel = false;
+                isEditingFriendCode = false;
+                isEditingLocalFriendCode = false;
+                isEditingGhostChatColor = false;
+                isEditingBan = false;
+                ResetAllBindWaits();
+            }
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
+            GUI.enabled = true;
             if (newFpsLimit != fpsLimit)
             {
                 fpsLimit = newFpsLimit;
+                fpsLimitInput = fpsLimit.ToString();
                 ApplyFpsLimit();
                 menuPrefsChanged = true;
             }
@@ -1072,7 +1177,7 @@ private void DrawMenuTab()
             if (prevSpoofMenuEnabled != SpoofMenuEnabled) menuPrefsChanged = true;
             GUILayout.Label(L("Reports a fake mod menu name to other players.", "Показывает игрокам поддельное имя меню."), menuDescStyle);
             GUILayout.Space(8);
-            float spoofRowWidth = Mathf.Max(260f, windowRect.width - 210f);
+            float spoofRowWidth = GetMenuWorkWidth(160f, 360f);
             float spoofNameWidth = Mathf.Clamp(spoofRowWidth - 76f, 150f, 260f);
             GUILayout.Label(L("Fake Name", "Поддельное имя"), new GUIStyle(toggleLabelStyle), GUILayout.Height(16), GUILayout.ExpandWidth(false));
             GUILayout.BeginHorizontal(GUILayout.Width(spoofNameWidth + 68f));
@@ -1126,6 +1231,18 @@ private void DrawMenuTab()
             GUILayout.EndVertical();
 
             GUILayout.BeginVertical(menuCardStyle);
+            DrawMenuSectionHeader(L("DISCORD RICH PRESENCE", "DISCORD СТАТУС"));
+            bool prevDiscordRpc = discordRpcEnabled;
+            discordRpcEnabled = DrawToggle(discordRpcEnabled, L("Enable Discord RPC", "Включить Discord RPC"), 280);
+            if (prevDiscordRpc != discordRpcEnabled)
+            {
+                menuPrefsChanged = true;
+            }
+            GUILayout.EndVertical();
+
+
+
+            GUILayout.BeginVertical(menuCardStyle);
             DrawMenuSectionHeader(L("RESET SETTINGS", "СБРОС НАСТРОЕК"));
             GUILayout.Label(L("Resets all sliders back to their default values.", "Сбрасывает все ползунки до значений по умолчанию."), menuDescStyle);
             GUILayout.Space(6);
@@ -1137,6 +1254,44 @@ private void DrawMenuTab()
             GUILayout.EndVertical();
 
             if (menuPrefsChanged) SaveConfig();
+        }
+
+private static string FilterFpsLimitInput(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+
+            StringBuilder sb = new StringBuilder(3);
+            for (int i = 0; i < input.Length && sb.Length < 3; i++)
+            {
+                char c = input[i];
+                if (c >= '0' && c <= '9') sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+private void ApplyFpsLimitInput()
+        {
+            int val;
+            if (!int.TryParse(fpsLimitInput, out val))
+                val = fpsLimit;
+
+            fpsLimit = Mathf.Clamp(val, 1, 560);
+            fpsLimitInput = fpsLimit.ToString();
+            isEditingFpsLimit = false;
+            ApplyFpsLimit();
+            SaveConfig();
+        }
+
+private bool DrawFpsLimitInput()
+        {
+            GUIStyle style = new GUIStyle(isEditingFpsLimit ? activeTabStyle : inputBlockStyle);
+            style.alignment = TextAnchor.MiddleCenter;
+            style.clipping = TextClipping.Clip;
+            style.wordWrap = false;
+            style.padding = CreateRectOffset(4, 4, 0, 0);
+
+            Rect rect = GUILayoutUtility.GetRect(52f, 22f, GUILayout.Width(52f), GUILayout.Height(22f));
+            return GUI.Button(rect, string.IsNullOrEmpty(fpsLimitInput) ? (isEditingFpsLimit ? "|" : fpsLimit.ToString()) : fpsLimitInput, style);
         }
 
 private void ResetSlidersToDefault()
@@ -1151,6 +1306,9 @@ private void ResetSlidersToDefault()
             autoKickTimer = 5f;
             autoKickMinLevel = 200;
             fpsLimit = 60;
+            fpsLimitInput = "60";
+            isEditingFpsLimit = false;
+            limitFps = true;
             detailedLogsEnabled = false;
             throttleDefaultLogs = true;
             ApplyFpsLimit();
@@ -1217,19 +1375,31 @@ private void ResetSlidersToDefault()
             noTaskMode = false;
             noMapCooldowns = false;
             allowTasksAsImpostor = false;
+            hostAutoKillRandom = false;
+            hostAutoKillTarget = false;
+            hostAutoKillTargetId = byte.MaxValue;
+            bugRoomAutoAngel = false;
+            bugRoomAutoKillShield = false;
             killWhileVanishedHostOnly = false;
+            disableEndGameSafeMode = false;
+            disableMapSafeMode = false;
             DisableRoleBuffImmortality();
             roleBuffImmortality = false;
             neverEndGame = false;
             removePenalty = true;
+            guestExtraFeatures = false;
+            bypassAgeRestrictions = false;
             autoGhostAfterStart = false;
             AutoHostEnabled = false;
+            AutoHostShieldBreakEnabled = false;
             AutoReturnLobbyAfterMatch = true;
             AutoHostNotifications = true;
             AutoHostForceLastMinute = true;
             AutoHostWaitLoadedPlayers = true;
             AutoHostCancelBelowMin = true;
             AutoHostInstantStart = false;
+            AutoHostAutoRunEnabled = false;
+            BugroomScoutEnabled = false;
             autoBanEnabled = true;
             allowDuplicateColors = false;
             blockSpoofRPC = true;
@@ -1239,6 +1409,8 @@ private void ResetSlidersToDefault()
             autoKickBugs = false;
             disableVoteKicks = false;
             banVoteKickVoters = false;
+            votekickAutoRejoin = false;
+            votekickCopyCode = true;
             blockSabotageRPC = true;
             blockGameRpcInLobby = true;
             blockChatFloodRpc = true;
@@ -1256,22 +1428,26 @@ private void ResetSlidersToDefault()
             enableLocalFriendCodeSpoof = false;
             SpoofMenuEnabled = false;
             enableBackground = false;
+            showWatermark = true;
             hardMenu = false;
             rgbMenuText = false;
             boldMenuText = true;
             EnableCustomNotifs = true;
             LogAllRPCs = true;
+            discordRpcEnabled = true;
 
             settingsDirty = true;
             InitStyles();
             UpdateAccentColor(currentAccentColor);
 
-            ShowNotification(L("All sliders & toggles reset to default.", "Все ползунки и тумблеры сброшены до дефолта."));
+            ShowNotification("All sliders & toggles reset to default.");
         }
 
 private Vector2 outfitsScrollPos = Vector2.zero;
 
 public static bool AutoHostEnabled = false;
+
+public static bool AutoHostShieldBreakEnabled = false;
 
 public static bool AutoReturnLobbyAfterMatch = true;
 
@@ -1284,6 +1460,10 @@ public static bool AutoHostWaitLoadedPlayers = true;
 public static bool AutoHostCancelBelowMin = true;
 
 public static bool AutoHostInstantStart = false;
+
+public static bool AutoHostAutoRunEnabled = false;
+
+public static bool BugroomScoutEnabled = false;
 
 public static int AutoHostMinPlayers = 4;
 

@@ -44,6 +44,8 @@ public static class AutoChatEveryone_Start_Patch
     public static void Postfix()
     {
         ElysiumModMenuGUI.InitializeKillCooldownOnRoundStart();
+        ElysiumModMenuGUI.ResetCurrentGameIntroState();
         ElysiumModMenuGUI.ResetAutoChatEveryoneRoundState();
+        ElysiumModMenuGUI.ElysiumAutoHostService.ResetAutoRunMatchState();
     }
 }

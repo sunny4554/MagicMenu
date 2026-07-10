@@ -1458,8 +1458,8 @@ internal static void FlagLobbyTeleport(PlayerControl player, int clientId, float
 			? "Warn"
 			: ModOptions.NormalizeNetworkProtectionAction(ModOptions.LobbyTeleportAction.Value);
 		string name = PlayerName(player);
-		string title = AcovText.T("Телепорт в лобби", "Lobby teleport");
-		string detail = AcovText.T($"Снап на {dist:F1} ед.", $"Snapped {dist:F1} units.");
+		string title = "Lobby teleport";
+		string detail = $"Snapped {dist:F1} units.";
 		AcovPlugin.Logger?.LogWarning((object)$"Lobby teleport: {name} (client {clientId}) snapped {dist:F1} units.");
 		bool notify = ShouldShowProtectionNotice(clientId, title, detail);
 		if (notify && action != "Null")

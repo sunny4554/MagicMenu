@@ -43,6 +43,92 @@ using Vector3 = UnityEngine.Vector3;
 public static class RevealVotesPatch
 {
     internal static List<int> _votedPlayers = new List<int>();
+    internal static Dictionary<byte, byte> _voteTargets = new Dictionary<byte, byte>();
+
+    internal static void RememberVote(byte voterId, byte votedForId)
+    {
+        try
+        {
+            if (votedForId == PlayerVoteArea.HasNotVoted ||
+                votedForId == PlayerVoteArea.MissedVote ||
+                votedForId == PlayerVoteArea.DeadVote)
+            {
+                _voteTargets.Remove(voterId);
+                return;
+            }
+
+            _voteTargets[voterId] = votedForId;
+        }
+        catch { }
+    }
+
+    internal static void ClearVoteIcons(MeetingHud meeting)
+    {
+        if (meeting == null || meeting.playerStates == null) return;
+        foreach (var item in meeting.playerStates)
+        {
+            if (item == null) continue;
+            var component = item.transform.GetComponent<VoteSpreader>();
+            if (component != null && component.Votes.Count != 0)
+            {
+                foreach (var sprite in component.Votes) Object.DestroyImmediate(sprite.gameObject);
+                component.Votes.Clear();
+            }
+        }
+    }
+
+    internal static void ClearMeetingVotes(bool clearRememberedVotes)
+    {
+        _votedPlayers.Clear();
+        if (clearRememberedVotes) _voteTargets.Clear();
+    }
+
+    internal static void DrawRememberedVotes(MeetingHud meeting)
+    {
+        if (meeting == null) return;
+        foreach (var vote in _voteTargets)
+            DrawVote(meeting, vote.Key, vote.Value);
+        ShowVoteSprites(meeting);
+    }
+
+    internal static void DrawVote(MeetingHud meeting, byte voterId, byte votedForId)
+    {
+        if (meeting == null || meeting.playerStates == null || GameData.Instance == null || _votedPlayers.Contains(voterId)) return;
+        if (votedForId == PlayerVoteArea.HasNotVoted ||
+            votedForId == PlayerVoteArea.MissedVote ||
+            votedForId == PlayerVoteArea.DeadVote) return;
+
+        var voter = GameData.Instance.GetPlayerById(voterId);
+        if (voter == null || voter.Disconnected) return;
+
+        _votedPlayers.Add(voterId);
+        if (votedForId == PlayerVoteArea.SkippedVote)
+        {
+            if (meeting.SkippedVoting != null)
+                meeting.BloopAVoteIcon(voter, 0, meeting.SkippedVoting.transform);
+            return;
+        }
+
+        foreach (var state in meeting.playerStates)
+        {
+            if (state == null || state.TargetPlayerId != votedForId) continue;
+            meeting.BloopAVoteIcon(voter, 0, state.transform);
+            break;
+        }
+    }
+
+    internal static void ShowVoteSprites(MeetingHud meeting)
+    {
+        if (meeting == null || meeting.playerStates == null) return;
+        foreach (var item in meeting.playerStates)
+        {
+            if (item == null) continue;
+            var component = item.transform.GetComponent<VoteSpreader>();
+            if (component != null) foreach (var sprite in component.Votes) sprite.gameObject.SetActive(true);
+        }
+        if (meeting.SkippedVoting != null) meeting.SkippedVoting.SetActive(true);
+    }
+
     public static void Prefix(MeetingHud __instance)
     {
         if (!ElysiumModMenuGUI.RevealVotesEnabled) return;
@@ -53,23 +139,30 @@ public static class RevealVotesPatch
             {
                 if (item == null) continue;
                 var playerById = GameData.Instance.GetPlayerById(item.TargetPlayerId);
-                if (playerById == null || playerById.Disconnected || item.VotedFor == PlayerVoteArea.HasNotVoted ||
-                    item.VotedFor == PlayerVoteArea.MissedVote || item.VotedFor == PlayerVoteArea.DeadVote || _votedPlayers.Contains(item.TargetPlayerId)) continue;
-                _votedPlayers.Add(item.TargetPlayerId);
-                if (item.VotedFor != PlayerVoteArea.SkippedVote)
-                {
-                    foreach (var item2 in __instance.playerStates) if (item2.TargetPlayerId == item.VotedFor) { __instance.BloopAVoteIcon(playerById, 0, item2.transform); break; }
-                }
-                else if (__instance.SkippedVoting != null) __instance.BloopAVoteIcon(playerById, 0, __instance.SkippedVoting.transform);
+                if (playerById == null || playerById.Disconnected || _votedPlayers.Contains(item.TargetPlayerId)) continue;
+                byte votedForId = _voteTargets.TryGetValue(item.TargetPlayerId, out byte rememberedVote) ? rememberedVote : item.VotedFor;
+                DrawVote(__instance, item.TargetPlayerId, votedForId);
             }
-            foreach (var item3 in __instance.playerStates)
-            {
-                if (item3 == null) continue;
-                var component = item3.transform.GetComponent<VoteSpreader>();
-                if (component != null) foreach (var sprite in component.Votes) sprite.gameObject.SetActive(true);
-            }
-            if (__instance.SkippedVoting != null) __instance.SkippedVoting.SetActive(true);
+            ShowVoteSprites(__instance);
         }
         catch { }
+    }
+}
+
+[HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.CastVote))]
+public static class RevealVotesCastVotePatch
+{
+    public static void Postfix(byte srcPlayerId, byte suspectPlayerId)
+    {
+        RevealVotesPatch.RememberVote(srcPlayerId, suspectPlayerId);
+    }
+}
+
+[HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.Close))]
+public static class RevealVotesClosePatch
+{
+    public static void Prefix()
+    {
+        RevealVotesPatch.ClearMeetingVotes(true);
     }
 }

@@ -45,6 +45,8 @@ namespace ElysiumModMenu
 
 public void Update()
         {
+            if (isPanicked) return;
+
             TickNotificationQueue();
             TickFakeStartCounter();
             TickAutoTwoImpostors();
@@ -92,11 +94,8 @@ public void Update()
                         MeetingHud.Instance.RpcClose();
                 }
 
-                if (bindInstaStart != KeyCode.None && Input.GetKeyDown(bindInstaStart) && CanRunHostBind("Insta Start") && GameStartManager.Instance != null)
-                {
-                    GameStartManager.Instance.startState = GameStartManager.StartingStates.Countdown;
-                    GameStartManager.Instance.countDownTimer = 0f;
-                }
+                if (bindInstaStart != KeyCode.None && Input.GetKeyDown(bindInstaStart) && CanRunHostBind("Insta Start"))
+                    TryInstaStartAfterEveryoneLoaded(true);
                 if (bindMagnetCursor != KeyCode.None && Input.GetKeyDown(bindMagnetCursor))
                 {
                     autoFollowCursor = !autoFollowCursor;
@@ -159,6 +158,7 @@ public void Update()
 
             ElysiumAutoHostService.Tick();
             ElysiumAutoLobbyReturn.UpdateLogic();
+            ElysiumBugroomScoutService.Tick();
             ApplyFpsLimit();
             TryAutoGhostAfterStartTick();
             TryAutoBanCustomPlatformsTick();
@@ -166,16 +166,15 @@ public void Update()
             ApplyVentCheatsTick();
             TickRoleBuffImmortality();
             try { GetCurrentRoomCodeForStatus(); } catch { }
-            if (votekickEveryone)
-            {
-                TickVotekickEveryoneRun();
-            }
+            TickWhitelistOnlyLobby();
+            TickVotekickEveryoneRun();
             if (stylesInited && rgbMenuMode)
             {
                 rgbMenuHue += Time.deltaTime * 0.2f;
                 if (rgbMenuHue > 1f) rgbMenuHue -= 1f;
                 UpdateAccentColor(Color.HSVToRGB(rgbMenuHue, 1f, 1f));
             }
+            TickRgbTaskBar();
 
             if (wasShowMenu && !showMenu) SaveConfig();
             wasShowMenu = showMenu;
@@ -189,6 +188,10 @@ public void Update()
             if (PlayerControl.LocalPlayer != null)
             {
                 TryKillAuraTick();
+                TryHostAutoKillRandomTick();
+                TryHostAutoKillTargetTick();
+                TryBugRoomAutoAngelTick();
+                TryBugRoomAutoKillShieldTick();
                 TryAutoBanBrokenFriendCodeTick();
                 TryAutoKickLowLevelTick();
 
@@ -259,7 +262,7 @@ public void Update()
                                     MeetingHud.Instance.RpcClose();
                                     pendingAutoMeeting = false;
                                     autoMeetingTimer = 0f;
-                                    ShowNotification("<color=#00FF00>[CHAT EVERYONE]</color> Игроки собраны в кафетерии!");
+                                    ShowNotification("<color=#00FF00>[CHAT EVERYONE]</color> Players gathered in cafeteria!");
                                 }
                             }
                         }
@@ -291,11 +294,17 @@ public void Update()
 
                             if (player != null && !player.Disconnected && player.Object != null)
                             {
+                                if (IsProtectedFromAnticheat(player.Object))
+                                {
+                                    fortegreenTimer.Remove(pid);
+                                    continue;
+                                }
+
                                 int currentColor = (int)player.DefaultOutfit.ColorId;
                                 if (currentColor == 18 || currentColor >= Palette.PlayerColors.Length)
                                 {
                                     AmongUsClient.Instance.KickPlayer(player.ClientId, false);
-                                    ShowNotification($"<color=#FF0000>[AUTO-KICK]</color> Игрок <b>{player.PlayerName}</b> кикнут (Баг цвета)!");
+                                    ShowNotification($"<color=#FF0000>[AUTO-KICK]</color> Player <b>{player.PlayerName}</b> kicked (color bug)!");
                                 }
                             }
                             fortegreenTimer.Remove(pid);
@@ -398,6 +407,7 @@ public void Update()
                         foreach (var pc in PlayerControl.AllPlayerControls)
                         {
                             if (pc == null || pc.Data == null || pc.Data.Disconnected || pc == PlayerControl.LocalPlayer) continue;
+                            if (IsProtectedFromAnticheat(pc)) continue;
 
                             string fc = GetDisplayedFriendCode(pc.Data, string.Empty);
                             if (IsFriendCodeBanned(fc))
@@ -418,6 +428,7 @@ public void Update()
                         foreach (var pc in PlayerControl.AllPlayerControls)
                         {
                             if (pc == null || pc.Data == null || pc.Data.Disconnected || pc == PlayerControl.LocalPlayer) continue;
+                            if (IsProtectedFromAnticheat(pc)) continue;
 
                             SafePlayerIdentitySnapshot identity;
                             bool hasIdentity = TryGetSafeIdentity(pc, out identity);
@@ -684,6 +695,127 @@ public static void ResetAutoChatEveryoneRoundState()
             catch { }
         }
 
+public static void ResetCurrentGameIntroState()
+        {
+            gameIntroShhhSeenGameId = int.MinValue;
+        }
+
+public static void MarkCurrentGameIntroShhhSeen()
+        {
+            try
+            {
+                gameIntroShhhSeenGameId = AmongUsClient.Instance != null ? AmongUsClient.Instance.GameId : int.MinValue;
+            }
+            catch
+            {
+                gameIntroShhhSeenGameId = int.MinValue;
+            }
+        }
+
+public static bool HasCurrentGameSeenShhh()
+        {
+            try
+            {
+                return AmongUsClient.Instance != null &&
+                    AmongUsClient.Instance.IsGameStarted &&
+                    gameIntroShhhSeenGameId == AmongUsClient.Instance.GameId;
+            }
+            catch { return false; }
+        }
+
+public static bool CanRunHostEndGameAction(bool notify = false)
+        {
+            try
+            {
+                if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost || GameManager.Instance == null)
+                    return false;
+                if (disableEndGameSafeMode)
+                    return true;
+                if (!AmongUsClient.Instance.IsGameStarted || ShipStatus.Instance == null || LobbyBehaviour.Instance != null)
+                {
+                    if (notify) ShowNotification("<color=#FF4444>[END GAME]</color> Match is not loaded yet.");
+                    return false;
+                }
+                if (!HasCurrentGameSeenShhh())
+                {
+                    if (notify) ShowNotification("<color=#FF4444>[END GAME]</color> Wait for Shhh before ending.");
+                    return false;
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+
+public static bool AreAllLobbyPlayersLoadedForStart(out int connectedPlayers, out int readyPlayers, out string loadingName)
+        {
+            connectedPlayers = 0;
+            readyPlayers = 0;
+            loadingName = "player";
+
+            try
+            {
+                if (AmongUsClient.Instance == null)
+                    return false;
+
+                InnerNetClient client = (InnerNetClient)AmongUsClient.Instance;
+                if (client == null || client.allClients == null)
+                    return false;
+
+                var cursor = client.allClients.GetEnumerator();
+                while (cursor.MoveNext())
+                {
+                    ClientData data = cursor.Current;
+                    if (data == null || data.Id < 0)
+                        continue;
+                    if (IsAutoChatClientDisconnected(data))
+                        continue;
+
+                    connectedPlayers++;
+                    if (IsClientLoadedForLobbyStart(data))
+                        readyPlayers++;
+                    else
+                        loadingName = CleanLobbyStartPlayerName(data.PlayerName);
+                }
+
+                return connectedPlayers > 0 && readyPlayers >= connectedPlayers;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+public static bool CanStartLobbyAfterEveryoneLoaded(bool notify = false)
+        {
+            try
+            {
+                if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost || LobbyBehaviour.Instance == null || GameStartManager.Instance == null)
+                    return false;
+
+                if (AreAllLobbyPlayersLoadedForStart(out int connectedPlayers, out int readyPlayers, out string loadingName))
+                    return true;
+
+                if (notify)
+                    ShowNotification($"<color=#FFAC1C>[START]</color> Wait for players to load {readyPlayers}/{connectedPlayers}: {loadingName}");
+                return false;
+            }
+            catch { return false; }
+        }
+
+public static bool TryInstaStartAfterEveryoneLoaded(bool notify = false)
+        {
+            if (!CanStartLobbyAfterEveryoneLoaded(notify))
+                return false;
+
+            try
+            {
+                GameStartManager.Instance.startState = GameStartManager.StartingStates.Countdown;
+                GameStartManager.Instance.countDownTimer = 0f;
+                return true;
+            }
+            catch { return false; }
+        }
+
 public static void NotifyAutoChatEveryoneShhhSeen()
         {
             try
@@ -733,6 +865,10 @@ private static void TickAutoChatEveryoneAfterShhh()
                     autoMeetingTimer = 0f;
                     return;
                 }
+
+                autoMeetingTimer += Time.deltaTime;
+                if (autoMeetingTimer < autoChatEveryoneDelay)
+                    return;
 
                 PlayerControl local = PlayerControl.LocalPlayer;
                 if (local == null || local.Data == null)
@@ -785,10 +921,29 @@ private static void ClearAutoChatEveryoneState()
             autoChatEveryoneNoEjectSent = false;
         }
 
+private static bool IsClientLoadedForLobbyStart(ClientData data)
+        {
+            try
+            {
+                PlayerControl character = data.Character;
+                return character != null && character.Data != null && !character.Data.Disconnected && character.PlayerId < 100;
+            }
+            catch { return false; }
+        }
+
+private static string CleanLobbyStartPlayerName(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return "player";
+            string clean = value.Replace("\r", " ").Replace("\n", " ").Trim();
+            return clean.Length <= 18 ? clean : clean.Substring(0, 17) + "...";
+        }
+
 private static bool AreAllPlayersLoadedForAutoChatEveryone()
         {
             try
             {
+                if (IntroCutscene.Instance != null)
+                    return false;
                 if (Minigame.Instance != null)
                     return false;
                 if (MeetingHud.Instance != null)

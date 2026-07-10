@@ -279,7 +279,7 @@ private IEnumerator AttemptShapeshiftFrame(PlayerControl target, PlayerControl m
             {
                 target.RpcShapeshift(morphInto, true);
             }
-            ShowNotification($"<color=#ca08ff>[MORPH]</color> <b>{target.Data.PlayerName}</b> превращен в <b>{morphInto.Data.PlayerName}</b>!");
+            ShowNotification($"<color=#ca08ff>[MORPH]</color> <b>{target.Data.PlayerName}</b> morphed into <b>{morphInto.Data.PlayerName}</b>!");
         }
 
 private IEnumerator MassMorphCoroutine()
@@ -340,16 +340,8 @@ private IEnumerator MassMorphCoroutine()
 
 private void ForceMeetingAsPlayer(PlayerControl target)
         {
-            if (target == null || AmongUsClient.Instance == null) return;
-            if (!AmongUsClient.Instance.AmHost) return;
-
-            try
-            {
-                MeetingRoomManager.Instance.AssignSelf(target, null);
-                target.RpcStartMeeting(null);
-                DestroyableSingleton<HudManager>.Instance.OpenMeetingRoom(target);
-            }
-            catch { }
+            if (target == null || target.Data == null) return;
+            TryOpenModdedMeeting(target, null, $"<color=#00FF00>[MEETING]</color> Modded meeting from <b>{target.Data.PlayerName}</b>.");
         }
 
 private void KillAll()
@@ -359,7 +351,7 @@ private void KillAll()
             {
                 foreach (var player in PlayerControl.AllPlayerControls.ToArray())
                 {
-                    TryHostMalumMurderPlayer(player);
+                    TryHostElysiumMurderPlayer(player);
                 }
                 return;
             }
@@ -391,7 +383,7 @@ private void DespawnLobby()
         {
             try
             {
-                if (!CanMutateLobbyMap("Despawn Lobby")) return;
+                if (!CanMutateLobbyMap("Despawn Lobby", false, disableMapSafeMode)) return;
 
                 int despawned = 0;
                 try
@@ -422,7 +414,7 @@ private void SpawnLobby()
         {
             try
             {
-                if (!CanMutateLobbyMap("Spawn Lobby")) return;
+                if (!CanMutateLobbyMap("Spawn Lobby", false, disableMapSafeMode)) return;
 
                 if (LobbyBehaviour.Instance != null)
                 {
@@ -452,7 +444,7 @@ private static void ResetLobbyMapTransientState()
             try { lastKillTimestamps.Clear(); } catch { }
         }
 
-private static bool CanMutateLobbyMap(string actionName, bool allowActiveMatch = false)
+private static bool CanMutateLobbyMap(string actionName, bool allowActiveMatch = false, bool disableSafeMode = false)
         {
             try
             {
@@ -462,7 +454,7 @@ private static bool CanMutateLobbyMap(string actionName, bool allowActiveMatch =
                     return false;
                 }
 
-                if (MeetingHud.Instance != null || ExileController.Instance != null || IntroCutscene.Instance != null)
+                if (!disableSafeMode && (MeetingHud.Instance != null || ExileController.Instance != null || IntroCutscene.Instance != null))
                 {
                     ShowNotification($"<color=#FFAA00>[{actionName}]</color> Blocked during meeting/exile/intro.");
                     return false;
@@ -522,7 +514,7 @@ private static void ApplyLocalNameSelf(string newName, bool notify = true)
                 }
 
                 if (notify)
-                    ShowNotification($"<color=#00FFAA>[LOCAL NAME]</color> {L("Applied locally:", "Локально применен:")} <b>{newName}</b>");
+                    ShowNotification($"<color=#00FFAA>[LOCAL NAME]</color> Applied locally: <b>{newName}</b>");
             }
             catch { }
         }
@@ -572,7 +564,7 @@ private static void ApplyLocalNameSelf(string newName, bool notify = true)
                 localFriendCodeInput = fakeFriendCode;
 
                 if (notify)
-                    ShowNotification($"<color=#00FFAA>[LOCAL FC]</color> {L("Applied locally:", "Локально применен:")} <b>{fakeFriendCode}</b>");
+                    ShowNotification($"<color=#00FFAA>[LOCAL FC]</color> Applied locally: <b>{fakeFriendCode}</b>");
             }
             catch { }
         }
@@ -688,6 +680,7 @@ private void SaveConfig()
                 Plugin.RgbMenuModeConfig.Value = rgbMenuMode;
                 Plugin.RgbMenuTextConfig.Value = rgbMenuText;
                 Plugin.BoldMenuTextConfig.Value = boldMenuText;
+                SaveBool("M_RgbTaskBar", rgbTaskBar);
                 if (menuToggleKey == KeyCode.None) menuToggleKey = KeyCode.Insert;
                 Plugin.MenuKeybind.Value = menuToggleKey;
                 PlayerPrefs.SetInt("M_MenuToggleKey", (int)menuToggleKey);
@@ -695,6 +688,7 @@ private void SaveConfig()
                 SaveBool("M_RgbMenuText", rgbMenuText);
                 SaveBool("M_BoldMenuText", boldMenuText);
                 PlayerPrefs.SetInt("M_MenuLanguageIndex", currentMenuLanguageIndex);
+                SaveBool("M_LimitFps", limitFps);
                 PlayerPrefs.SetInt("M_FpsLimit", fpsLimit);
                 SaveBool("M_DetailedLogsEnabled", detailedLogsEnabled);
                 SaveBool("M_EnableBackground", enableBackground);
@@ -703,6 +697,7 @@ private void SaveConfig()
                 SaveBool("M_BlockInnerslothTelemetry", blockInnerslothTelemetry);
                 SaveBool("M_EnableCustomNotifs", EnableCustomNotifs);
                 SaveBool("M_LogAllRPCs", LogAllRPCs);
+                SaveBool("M_DiscordRpcEnabled", discordRpcEnabled);
                 PlayerPrefs.SetInt("M_SelectedSpoofMenuIndex", selectedSpoofMenuIndex);
                 PlayerPrefs.SetFloat("M_MenuWindowX", windowRect.x);
                 PlayerPrefs.SetFloat("M_MenuWindowY", windowRect.y);
@@ -746,6 +741,10 @@ private void SaveConfig()
                 PlayerPrefs.SetFloat("M_AutoKickTimer", autoKickTimer);
                 SaveBool("M_DisableVoteKicks", disableVoteKicks);
                 SaveBool("M_BanVoteKickVoters", banVoteKickVoters);
+                SaveBool("M_VotekickAutoRejoin", votekickAutoRejoin);
+                SaveBool("M_VotekickCopyCode", votekickCopyCode);
+                SaveBool("M_WhitelistOnlyLobby", whitelistOnlyLobby);
+                PlayerPrefs.SetString("M_LobbyWhitelist", SaveLobbyWhitelist());
                 SaveBool("M_LocalNameSpoof", enableLocalNameSpoof);
                 SaveBool("M_LocalFakeFCEnabled", enableLocalFriendCodeSpoof);
                 PlayerPrefs.SetString("M_LocalFakeFC", localFriendCodeInput);
@@ -798,10 +797,19 @@ private void SaveConfig()
                 SaveBool("M_UnlockVents", unlockVents);
                 SaveBool("M_WalkInVents", walkInVents);
                 SaveBool("M_AllowTasksAsImpostor", allowTasksAsImpostor);
+                SaveBool("M_HostAutoKillRandom", hostAutoKillRandom);
+                SaveBool("M_HostAutoKillTarget", hostAutoKillTarget);
+                PlayerPrefs.SetInt("M_HostAutoKillTargetId", hostAutoKillTargetId);
+                SaveBool("M_BugRoomAutoAngel", bugRoomAutoAngel);
+                SaveBool("M_BugRoomAutoKillShield", bugRoomAutoKillShield);
                 SaveBool("M_KillWhileVanishedHostOnly", killWhileVanishedHostOnly);
+                SaveBool("M_DisableEndGameSafeMode", disableEndGameSafeMode);
+                SaveBool("M_DisableMapSafeMode", disableMapSafeMode);
                 SaveBool("M_RoleBuffImmortality", roleBuffImmortality);
                 SaveBool("M_NeverEndGame", neverEndGame);
                 SaveBool("M_RemovePenalty", removePenalty);
+                SaveBool("M_GuestExtraFeatures", guestExtraFeatures);
+                SaveBool("M_BypassAgeRestrictions", bypassAgeRestrictions);
                 SaveBool("M_AlwaysShowLobbyTimer", alwaysShowLobbyTimer);
                 SaveBool("M_AutoBanEnabled", autoBanEnabled);
                 SaveBool("M_AllowDuplicateColors", allowDuplicateColors);
@@ -826,12 +834,15 @@ private void SaveConfig()
                 SaveBool("M_BanQuickChatEmptySpammer", banQuickChatEmptySpammer);
                 SaveBool("M_UnownedSpawnGuard", enableUnownedSpawnGuard);
                 SaveBool("M_AutoHostEnabled", AutoHostEnabled);
+                SaveBool("M_AutoHostShieldBreakEnabled", AutoHostShieldBreakEnabled);
                 SaveBool("M_AutoReturnLobbyAfterMatch", AutoReturnLobbyAfterMatch);
                 SaveBool("M_AutoHostNotifications", AutoHostNotifications);
                 SaveBool("M_AutoHostForceLastMinute", AutoHostForceLastMinute);
                 SaveBool("M_AutoHostWaitLoadedPlayers", AutoHostWaitLoadedPlayers);
                 SaveBool("M_AutoHostCancelBelowMin", AutoHostCancelBelowMin);
                 SaveBool("M_AutoHostInstantStart", AutoHostInstantStart);
+                SaveBool("M_AutoHostAutoRunEnabled", AutoHostAutoRunEnabled);
+                SaveBool("M_BugroomScoutEnabled", BugroomScoutEnabled);
                 SaveBool("M_AutoGhostAfterStart", autoGhostAfterStart);
                 PlayerPrefs.SetInt("M_AutoHostMinPlayers", AutoHostMinPlayers);
                 PlayerPrefs.SetFloat("M_AutoHostStartDelaySeconds", AutoHostStartDelaySeconds);
@@ -860,6 +871,8 @@ private void DrawAutoHostTab()
             GUILayout.Space(10);
 
             AutoHostEnabled = DrawToggle(AutoHostEnabled, L("Enable Auto Host", "Включить Авто-Хост"), 250);
+            GUILayout.Space(5);
+            AutoHostShieldBreakEnabled = DrawToggle(AutoHostShieldBreakEnabled, L("Auto Shield Break (Host)", "Авто-ломать щит (хост)"), 250);
             GUILayout.Space(5);
             AutoReturnLobbyAfterMatch = DrawToggle(AutoReturnLobbyAfterMatch, L("Auto Return To Lobby", "Авто-возврат в лобби"), 250);
             GUILayout.Space(5);
@@ -904,6 +917,121 @@ private void DrawAutoHostTab()
             GUILayout.EndHorizontal();
 
             GUILayout.EndVertical();
+        }
+
+private void DrawBugRoomTab()
+        {
+            GUILayout.BeginVertical(menuCardStyle);
+            DrawMenuSectionHeader("BUG ROOM");
+
+            neverEndGame = DrawToggle(neverEndGame, L("Unlimited Game", "Бесконечная игра"), 280);
+            GUILayout.Space(5);
+            AutoHostAutoRunEnabled = DrawToggle(AutoHostAutoRunEnabled, L("Auto Run 1.75s + Imp Win", "Авто-прогон 1.75с + победа предателей"), 280);
+            GUILayout.Space(5);
+            hostAutoKillRandom = DrawToggle(hostAutoKillRandom, "Kill Random Target", 280);
+            GUILayout.Space(5);
+            hostAutoKillTarget = DrawToggle(hostAutoKillTarget, "Auto Kill Target", 280);
+            GUILayout.Space(5);
+            DrawBugRoomKillTargetPicker();
+            GUILayout.Space(8);
+            bugRoomAutoAngel = DrawToggle(bugRoomAutoAngel, "Auto Angel 0.10", 280);
+            GUILayout.Space(5);
+            bugRoomAutoKillShield = DrawToggle(bugRoomAutoKillShield, "Auto Kill Angel Shield 0.13", 280);
+
+            GUILayout.Space(12);
+            DrawMenuSectionHeader("BUGROOM SCOUT");
+            bool oldScout = BugroomScoutEnabled;
+            BugroomScoutEnabled = DrawToggle(BugroomScoutEnabled, "Auto Create + Find TXT", 280);
+            if (oldScout != BugroomScoutEnabled)
+            {
+                settingsDirty = true;
+                ElysiumBugroomScoutService.ForceReload();
+            }
+
+            var scout = ElysiumBugroomScoutService.GetStatusSnapshot();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Create / Reload TXT", btnStyle, GUILayout.Width(170), GUILayout.Height(25)))
+            {
+                ElysiumBugroomScoutService.ForceReload();
+                GUIUtility.systemCopyBuffer = scout.FilePath;
+                ShowNotification("<color=#00FFAA>[BUGROOM SCOUT]</color> TXT path copied.");
+            }
+            GUILayout.Label($"Targets: <color=#{GetMenuAccentHex()}>{scout.TargetCount}</color> | {scout.State}", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 }, GUILayout.Height(25));
+            GUILayout.EndHorizontal();
+
+            string code = string.IsNullOrWhiteSpace(scout.CurrentCode) ? "-" : scout.CurrentCode;
+            string suffix = string.IsNullOrWhiteSpace(scout.CurrentSuffix) ? "-" : scout.CurrentSuffix;
+            GUILayout.Label($"TXT: {scout.FilePath}", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 11, wordWrap = true });
+            GUILayout.Label($"Room: <color=#{GetMenuAccentHex()}>{code}</color> | suffix: <color=#{GetMenuAccentHex()}>{suffix}</color>", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 });
+
+            GUILayout.EndVertical();
+        }
+
+private void DrawBugRoomKillTargetPicker()
+        {
+            List<PlayerControl> plrs = GetBugRoomKillTargets();
+            if (plrs.Count == 0)
+            {
+                GUILayout.Label("<color=#aaaaaa>Target: none</color>", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 });
+                return;
+            }
+
+            int idx = plrs.FindIndex(p => p != null && p.PlayerId == hostAutoKillTargetId);
+            if (idx < 0)
+            {
+                idx = 0;
+                hostAutoKillTargetId = plrs[0].PlayerId;
+            }
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("<", btnStyle, GUILayout.Width(28), GUILayout.Height(24)))
+            {
+                idx--;
+                if (idx < 0) idx = plrs.Count - 1;
+                hostAutoKillTargetId = plrs[idx].PlayerId;
+                settingsDirty = true;
+            }
+
+            PlayerControl target = plrs[idx];
+            string nm = target.Data != null && !string.IsNullOrWhiteSpace(target.Data.PlayerName) ? target.Data.PlayerName : $"Player {target.PlayerId}";
+            if (nm.Length > 18) nm = nm.Substring(0, 18) + "..";
+            if (target.Data != null && target.Data.IsDead) nm += " [dead]";
+
+            GUIStyle mid = new GUIStyle(btnStyle);
+            mid.normal.background = null;
+            mid.hover.background = null;
+            mid.normal.textColor = GetMenuAccentColor();
+            mid.fontStyle = FontStyle.Bold;
+            mid.alignment = TextAnchor.MiddleCenter;
+            GUILayout.Label(nm, mid, GUILayout.Height(24), GUILayout.ExpandWidth(true));
+
+            if (GUILayout.Button(">", btnStyle, GUILayout.Width(28), GUILayout.Height(24)))
+            {
+                idx++;
+                if (idx >= plrs.Count) idx = 0;
+                hostAutoKillTargetId = plrs[idx].PlayerId;
+                settingsDirty = true;
+            }
+            GUILayout.EndHorizontal();
+        }
+
+private static List<PlayerControl> GetBugRoomKillTargets()
+        {
+            List<PlayerControl> plrs = new List<PlayerControl>();
+            try
+            {
+                if (PlayerControl.AllPlayerControls == null) return plrs;
+                PlayerControl local = PlayerControl.LocalPlayer;
+                foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+                {
+                    if (pc == null || pc == local || pc.Data == null) continue;
+                    if (pc.Data.Disconnected || pc.PlayerId >= 100) continue;
+                    plrs.Add(pc);
+                }
+                plrs.Sort((a, b) => a.PlayerId.CompareTo(b.PlayerId));
+            }
+            catch { }
+            return plrs;
         }
 }
 }

@@ -77,6 +77,8 @@ private void DrawMapsTab()
 
             DrawMenuSectionHeader(L("MAP CONTROL", "КОНТРОЛЬ КАРТЫ"));
             isManualMapSpawn = DrawToggle(isManualMapSpawn, L("Manual Map Spawn Mode", "Ручной спавн карты"), 250);
+            GUILayout.Space(5);
+            disableMapSafeMode = DrawToggle(disableMapSafeMode, "Disable Map Safe Mode", 250);
             GUILayout.Space(10);
 
             GUILayout.BeginHorizontal();
@@ -108,7 +110,7 @@ private void DrawMapsTab()
                     if (GUILayout.Button(loc.Key, btnStyle, GUILayout.Width(135), GUILayout.Height(30)))
                     {
                         TeleportTo(loc.Value);
-                        ShowNotification($"<color=#00FF00>[TELEPORT]</color> {L("Moved to:", "Перемещен в:")} <b>{loc.Key}</b>");
+                        ShowNotification($"<color=#00FF00>[TELEPORT]</color> Moved to: <b>{loc.Key}</b>");
                     }
 
                     count++;
@@ -386,7 +388,6 @@ private void DrawPortableChatTab()
             GUILayout.Space(8);
 
             GUIStyle logBoxStyle = new GUIStyle(boxStyle);
-            if (texInputBg != null) logBoxStyle.normal.background = texInputBg;
             logBoxStyle.padding = CreateRectOffset(8, 8, 6, 6);
             logBoxStyle.margin = CreateRectOffset(0, 0, 0, 0);
 
@@ -687,7 +688,7 @@ private static void TrySpellCheckNotify(string text)
                 if (suspicious.Count > 0)
                 {
                     string joined = string.Join(", ", suspicious);
-                    ShowNotification($"<color=#FFCC66>[SPELL]</color> Проверь слова: {joined}");
+                    ShowNotification($"<color=#FFCC66>[SPELL]</color> Check words: {joined}");
                 }
             }
             catch { }
@@ -732,6 +733,7 @@ private static void UpsertPlayerHistory(PlayerControl pc)
                 }
                 else
                 {
+                    bool nameChanged = IsDifferentHistoryName(item.Name, name);
                     changed = item.Name != name ||
                               item.FriendCode != fc ||
                               item.Puid != puid ||
@@ -740,6 +742,12 @@ private static void UpsertPlayerHistory(PlayerControl pc)
                               item.Level != level ||
                               !item.IsOnline ||
                               item.LeftUtc.HasValue;
+                    if (nameChanged)
+                    {
+                        string previousName = item.Name;
+                        item.Name = name;
+                        changed = AddPreviousPlayerHistoryName(item, previousName) || changed;
+                    }
                     item.Name = name;
                     item.FriendCode = fc;
                     item.Puid = puid;
@@ -873,9 +881,76 @@ private static string NormalizeHistoryIdentity(string value)
             return Regex.Replace(value.Trim(), "<.*?>", string.Empty).Trim().ToLowerInvariant();
         }
 
+private static bool IsDifferentHistoryName(string oldName, string newName)
+        {
+            string oldKey = NormalizeHistoryIdentity(oldName);
+            string newKey = NormalizeHistoryIdentity(newName);
+            return !string.IsNullOrEmpty(oldKey) && !string.IsNullOrEmpty(newKey) && oldKey != newKey;
+        }
+
+private static bool AddPreviousPlayerHistoryName(PlayerHistoryEntry entry, string previousName)
+        {
+            if (entry == null || string.IsNullOrWhiteSpace(previousName)) return false;
+
+            string normalizedPrevious = NormalizeHistoryIdentity(previousName);
+            if (string.IsNullOrEmpty(normalizedPrevious) || normalizedPrevious == NormalizeHistoryIdentity(entry.Name))
+                return false;
+
+            if (entry.PreviousNames == null)
+                entry.PreviousNames = new List<string>();
+
+            int existingIndex = entry.PreviousNames.FindIndex(x => NormalizeHistoryIdentity(x) == normalizedPrevious);
+            if (existingIndex == 0)
+                return false;
+            if (existingIndex > 0)
+                entry.PreviousNames.RemoveAt(existingIndex);
+
+            entry.PreviousNames.Insert(0, previousName.Trim());
+            while (entry.PreviousNames.Count > 6)
+                entry.PreviousNames.RemoveAt(entry.PreviousNames.Count - 1);
+            return true;
+        }
+
+private static void MergePreviousPlayerHistoryNames(PlayerHistoryEntry target, PlayerHistoryEntry source)
+        {
+            if (target == null || source == null || source.PreviousNames == null) return;
+
+            for (int i = source.PreviousNames.Count - 1; i >= 0; i--)
+                AddPreviousPlayerHistoryName(target, source.PreviousNames[i]);
+        }
+
+private static string FormatPlayerHistoryDisplayName(PlayerHistoryEntry entry)
+        {
+            if (entry == null) return string.Empty;
+            if (entry.PreviousNames == null || entry.PreviousNames.Count == 0)
+                return entry.Name;
+
+            string previous = string.Join(", ", entry.PreviousNames.Where(x => IsDifferentHistoryName(entry.Name, x)).Take(3).ToArray());
+            return string.IsNullOrWhiteSpace(previous) ? entry.Name : $"{entry.Name} ({previous})";
+        }
+
+private static string FormatPreviousPlayerHistoryNames(PlayerHistoryEntry entry)
+        {
+            if (entry == null || entry.PreviousNames == null || entry.PreviousNames.Count == 0)
+                return "none";
+
+            string[] names = entry.PreviousNames
+                .Where(x => IsDifferentHistoryName(entry.Name, x))
+                .Take(6)
+                .Select(x => x.Replace("|", " ").Replace("\r", " ").Replace("\n", " ").Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToArray();
+            return names.Length == 0 ? "none" : string.Join(" | ", names);
+        }
+
 private static PlayerHistoryEntry FindPlayerHistoryEntry(string key, int clientId, string friendCode, string puid, string name)
         {
             if (string.IsNullOrWhiteSpace(key)) return null;
+
+            if (clientId >= 0 &&
+                playerHistoryKeysByClientId.TryGetValue(clientId, out string clientKey) &&
+                playerHistoryEntryLookup.TryGetValue(clientKey, out PlayerHistoryEntry clientEntry))
+                return clientEntry;
 
             if (playerHistoryEntryLookup.TryGetValue(key, out PlayerHistoryEntry direct))
                 return direct;
@@ -1006,6 +1081,7 @@ private static string GetCustomPlatformName(ClientData client)
                 if (string.IsNullOrWhiteSpace(value)) return "";
                 value = Regex.Replace(value, "<.*?>", string.Empty).Trim();
                 if (string.IsNullOrWhiteSpace(value)) return "";
+                if ((int)client.PlatformData.Platform == 112) return "";
 
                 string platform = GetPlatform(client);
                 if (value.Equals(platform, StringComparison.OrdinalIgnoreCase)) return "";
@@ -1079,7 +1155,7 @@ private static void RebuildPlayerHistoryViewCache()
                 string status = e.IsOnline ? "<color=#55FF77>ONLINE</color>" : "<color=#aaaaaa>LEFT</color>";
                 playerHistoryViewRows.Add(new PlayerHistoryViewRow
                 {
-                    Header = $"{e.Name}  {status}",
+                    Header = $"{FormatPlayerHistoryDisplayName(e)}  {status}",
                     Identity = $"Lv: {e.Level} | FC: {e.FriendCode} | PUID: {e.Puid}",
                     Times = $"Joined: {e.FirstSeenUtc:HH:mm:ss} | Left: {(e.LeftUtc.HasValue ? e.LeftUtc.Value.ToString("HH:mm:ss") : "online")}",
                     Platform = $"Platform: {FormatPlatformHistory(e)}",
@@ -1137,6 +1213,17 @@ private static void EnsurePlayerHistoryLoaded()
                     else if (current != null && line.StartsWith("FriendCode: "))
                     {
                         current.FriendCode = line.Substring("FriendCode: ".Length).Trim();
+                    }
+                    else if (current != null && line.StartsWith("Previous Nicks: "))
+                    {
+                        current.PreviousNames.Clear();
+                        string value = line.Substring("Previous Nicks: ".Length).Trim();
+                        if (!string.IsNullOrWhiteSpace(value) && !value.Equals("none", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string[] parts = value.Split('|');
+                            for (int i = parts.Length - 1; i >= 0; i--)
+                                AddPreviousPlayerHistoryName(current, parts[i]);
+                        }
                     }
                     else if (current != null && line.StartsWith("PUID: "))
                     {
@@ -1213,6 +1300,13 @@ private static void AddLoadedPlayerHistoryEntry(PlayerHistoryEntry entry)
 
             if (entry.LastSeenUtc > existing.LastSeenUtc)
             {
+                if (IsDifferentHistoryName(existing.Name, entry.Name))
+                {
+                    string previousName = existing.Name;
+                    existing.Name = entry.Name;
+                    AddPreviousPlayerHistoryName(existing, previousName);
+                }
+                MergePreviousPlayerHistoryNames(existing, entry);
                 existing.Name = entry.Name;
                 existing.FriendCode = entry.FriendCode;
                 existing.Puid = entry.Puid;
@@ -1224,6 +1318,10 @@ private static void AddLoadedPlayerHistoryEntry(PlayerHistoryEntry entry)
                 existing.LeftUtc = entry.LeftUtc;
                 existing.IsOnline = false;
                 InvalidatePlayerHistoryViewCache();
+            }
+            else
+            {
+                MergePreviousPlayerHistoryNames(existing, entry);
             }
 
             foreach (byte rpc in entry.RpcCalls)
@@ -1318,6 +1416,7 @@ private static void WritePlayerHistoryFile()
                 {
                     string left = e.LeftUtc.HasValue ? e.LeftUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") : "online";
                     lines.Add($"Nick: {e.Name}");
+                    lines.Add($"Previous Nicks: {FormatPreviousPlayerHistoryNames(e)}");
                     lines.Add($"Level: {e.Level}");
                     lines.Add($"FriendCode: {e.FriendCode}");
                     lines.Add($"PUID: {e.Puid}");
@@ -1370,6 +1469,253 @@ private void TryKillAuraTick()
             catch { }
         }
 
+private void TryHostAutoKillRandomTick()
+        {
+            if (!hostAutoKillRandom)
+            {
+                hostAutoKillTimer = 0f;
+                return;
+            }
+
+            if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost || AmongUsClient.Instance.GameState != InnerNetClient.GameStates.Started) return;
+            if (ShipStatus.Instance == null || LobbyBehaviour.Instance != null) return;
+            if (IsMeetingOrExileActive() || IntroCutscene.Instance != null) return;
+
+            PlayerControl localPlayer = PlayerControl.LocalPlayer;
+            if (localPlayer == null || localPlayer.Data == null) return;
+            if (PlayerControl.AllPlayerControls == null) return;
+
+            hostAutoKillTimer += Time.deltaTime;
+            if (hostAutoKillTimer < 0.125f) return;
+
+            PlayerControl target = FindRandomHostAutoKillTarget(localPlayer);
+            if (target == null) return;
+
+            hostAutoKillTimer = 0f;
+            TryHostElysiumMurderPlayer(target);
+        }
+
+private static PlayerControl FindRandomHostAutoKillTarget(PlayerControl localPlayer)
+        {
+            try
+            {
+                if (localPlayer == null || PlayerControl.AllPlayerControls == null) return null;
+
+                List<PlayerControl> targets = new List<PlayerControl>();
+                foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+                {
+                    if (pc == null || pc == localPlayer || pc.Data == null) continue;
+                    if (pc.Data.Disconnected) continue;
+                    targets.Add(pc);
+                }
+
+                if (targets.Count == 0) return null;
+                return targets[UnityEngine.Random.Range(0, targets.Count)];
+            }
+            catch { return null; }
+        }
+
+private void TryHostAutoKillTargetTick()
+        {
+            if (!hostAutoKillTarget)
+            {
+                hostAutoKillTargetTimer = 0f;
+                return;
+            }
+
+            if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost || AmongUsClient.Instance.GameState != InnerNetClient.GameStates.Started) return;
+            if (ShipStatus.Instance == null || LobbyBehaviour.Instance != null) return;
+            if (IsMeetingOrExileActive() || IntroCutscene.Instance != null) return;
+
+            PlayerControl localPlayer = PlayerControl.LocalPlayer;
+            if (localPlayer == null || localPlayer.Data == null) return;
+            if (PlayerControl.AllPlayerControls == null) return;
+
+            hostAutoKillTargetTimer += Time.deltaTime;
+            if (hostAutoKillTargetTimer < 0.125f) return;
+
+            PlayerControl target = FindHostAutoKillTarget(localPlayer);
+            if (target == null) return;
+
+            hostAutoKillTargetTimer = 0f;
+            TryHostElysiumMurderPlayer(target);
+        }
+
+private static PlayerControl FindHostAutoKillTarget(PlayerControl localPlayer)
+        {
+            try
+            {
+                if (localPlayer == null || PlayerControl.AllPlayerControls == null) return null;
+                foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+                {
+                    if (pc == null || pc == localPlayer || pc.Data == null) continue;
+                    if (pc.Data.Disconnected || pc.Data.IsDead) continue;
+                    if (pc.PlayerId == hostAutoKillTargetId) return pc;
+                }
+            }
+            catch { }
+            return null;
+        }
+
+private void TryBugRoomAutoAngelTick()
+        {
+            if (!bugRoomAutoAngel)
+            {
+                bugRoomAngelTimer = 0f;
+                return;
+            }
+
+            if (!CanRunBugRoomNonHostTick()) return;
+
+            PlayerControl local = PlayerControl.LocalPlayer;
+            if (local == null || local.Data == null) return;
+
+            GuardianAngelRole angel = local.Data.Role as GuardianAngelRole;
+            if (angel == null) return;
+
+            bugRoomAngelTimer += Time.deltaTime;
+            if (bugRoomAngelTimer < 0.10f) return;
+
+            PlayerControl target = null;
+            try { target = angel.FindClosestTarget(); } catch { }
+            if (!IsBugRoomAngelTarget(target, local))
+                target = FindBugRoomAngelTarget(local);
+            if (target == null) return;
+
+            try
+            {
+                bugRoomAngelTimer = 0f;
+                angel.cooldownSecondsRemaining = 0f;
+                angel.SetPlayerTarget(target);
+
+                AbilityButton btn = HudManager.Instance != null ? HudManager.Instance.AbilityButton : null;
+                if (btn != null)
+                {
+                    btn.SetEnabled();
+                    btn.SetCooldownFill(0f);
+                    btn.DoClick();
+                }
+                else angel.UseAbility();
+            }
+            catch { }
+        }
+
+private void TryBugRoomAutoKillShieldTick()
+        {
+            if (!bugRoomAutoKillShield)
+            {
+                bugRoomShieldKillTimer = 0f;
+                return;
+            }
+
+            if (!CanRunBugRoomNonHostTick()) return;
+
+            PlayerControl local = PlayerControl.LocalPlayer;
+            if (local == null || local.Data == null || local.Data.IsDead || local.Data.Role == null) return;
+            if (!local.Data.Role.CanUseKillButton) return;
+
+            PlayerControl target = FindBugRoomShieldKillTarget(local);
+            if (target == null) return;
+
+            bugRoomShieldKillTimer += Time.deltaTime;
+            if (bugRoomShieldKillTimer < 0.13f) return;
+
+            try
+            {
+                KillButton btn = HudManager.Instance != null ? HudManager.Instance.KillButton : null;
+                if (btn == null) return;
+
+                bugRoomShieldKillTimer = 0f;
+                local.SetKillTimer(0f);
+                btn.SetTarget(target);
+                btn.SetCooldownFill(0f);
+                btn.SetEnabled();
+                btn.DoClick();
+            }
+            catch { }
+        }
+
+private static bool CanRunBugRoomNonHostTick()
+        {
+            try
+            {
+                if (AmongUsClient.Instance == null || AmongUsClient.Instance.AmHost) return false;
+                if (AmongUsClient.Instance.GameState != InnerNetClient.GameStates.Started) return false;
+                if (ShipStatus.Instance == null || LobbyBehaviour.Instance != null) return false;
+                if (IsMeetingOrExileActive() || IntroCutscene.Instance != null) return false;
+                return PlayerControl.LocalPlayer != null && PlayerControl.LocalPlayer.Data != null;
+            }
+            catch { return false; }
+        }
+
+private static bool IsBugRoomAngelTarget(PlayerControl pc, PlayerControl local)
+        {
+            try
+            {
+                if (pc == null || pc == local || pc.Data == null) return false;
+                if (pc.Data.Disconnected || pc.Data.IsDead) return false;
+                if (pc.inVent || pc.onLadder || pc.inMovingPlat) return false;
+                return pc.Visible;
+            }
+            catch { return false; }
+        }
+
+private static PlayerControl FindBugRoomAngelTarget(PlayerControl local)
+        {
+            try
+            {
+                if (local == null || PlayerControl.AllPlayerControls == null) return null;
+                Vector3 lp = local.transform.position;
+                PlayerControl best = null;
+                float dist = float.MaxValue;
+                foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+                {
+                    if (!IsBugRoomAngelTarget(pc, local)) continue;
+                    if (pc.protectedByGuardianId >= 0) continue;
+
+                    float d = Vector2.Distance(new Vector2(lp.x, lp.y), new Vector2(pc.transform.position.x, pc.transform.position.y));
+                    if (d < dist)
+                    {
+                        dist = d;
+                        best = pc;
+                    }
+                }
+                return best;
+            }
+            catch { return null; }
+        }
+
+private static PlayerControl FindBugRoomShieldKillTarget(PlayerControl local)
+        {
+            try
+            {
+                if (local == null || PlayerControl.AllPlayerControls == null) return null;
+                ImpostorRole role = local.Data.Role as ImpostorRole;
+                Vector3 lp = local.transform.position;
+                PlayerControl best = null;
+                float dist = GetVanillaKillDistance();
+
+                foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+                {
+                    if (pc == null || pc == local || pc.Data == null) continue;
+                    if (pc.Data.Disconnected || pc.Data.IsDead) continue;
+                    if (pc.protectedByGuardianId < 0) continue;
+                    if (pc.inVent || pc.onLadder || pc.inMovingPlat || !pc.Visible) continue;
+                    if (!killAnyone && IsImpostorTeamRole(pc.Data.RoleType)) continue;
+                    if (!killAnyone && role != null && !role.IsValidTarget(pc.Data)) continue;
+
+                    float d = Vector2.Distance(new Vector2(lp.x, lp.y), new Vector2(pc.transform.position.x, pc.transform.position.y));
+                    if (d <= dist)
+                    {
+                        dist = d;
+                        best = pc;
+                    }
+                }
+                return best;
+            }
+            catch { return null; }
+        }
+
 private void DrawAntiCheatTab()
         {
             Event wheelEvent = Event.current;
@@ -1379,7 +1725,7 @@ private void DrawAntiCheatTab()
                 wheelEvent.Use();
             }
 
-            float outerContentWidth = Mathf.Max(340f, windowRect.width - 214f);
+            float outerContentWidth = GetMenuWorkWidth(220f, 760f);
             float cardPaddingWidth = menuCardStyle != null && menuCardStyle.padding != null
                 ? menuCardStyle.padding.left + menuCardStyle.padding.right
                 : 28f;
@@ -1621,6 +1967,11 @@ private void DrawAntiCheatTab()
 
                 bool previousEnabled = GUI.enabled;
                 GUI.enabled = previousEnabled && AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost;
+
+                if (GUILayout.Button("WL", btnStyle, GUILayout.Width(34f), GUILayout.Height(22f)))
+                {
+                    AddToLobbyWhitelist(player.friendCode, player.puid, player.playerName);
+                }
 
                 if (GUILayout.Button("KICK", btnStyle, GUILayout.Width(48f), GUILayout.Height(22f)))
                 {

@@ -373,13 +373,45 @@ namespace ElysiumModMenu
 [HarmonyPatch(typeof(HudManager), nameof(HudManager.Update))]
         public static class HudManager_Update_Patch
         {
+            public static bool Prefix(HudManager __instance)
+            {
+                try
+                {
+                    if (__instance == null) return false;
+                    if (Screen.width < 640 || Screen.height < 360) return false;
+                }
+                catch { return false; }
+
+                return true;
+            }
+
+            public static Exception Finalizer(Exception __exception)
+            {
+                if (__exception == null) return null;
+                if (IsHudUpdateNullRef(__exception)) return null;
+                if (Screen.width < 640 || Screen.height < 360) return null;
+                return __exception;
+            }
+
+            private static bool IsHudUpdateNullRef(Exception ex)
+            {
+                try
+                {
+                    string s = (ex.GetType().Name + " " + ex.Message).ToLowerInvariant();
+                    return s.Contains("nullreferenceexception") || s.Contains("object reference not set");
+                }
+                catch { return false; }
+            }
+
             public static void Postfix(HudManager __instance)
             {
                 try
                 {
+                    if (__instance == null) return;
+
                     bool hudModalActive = ElysiumModMenuGUI.IsHudModalActive();
 
-                    if (!hudModalActive && ElysiumModMenuGUI.alwaysChat && __instance.Chat != null)
+                    if (!hudModalActive && ElysiumModMenuGUI.alwaysChat && __instance.Chat != null && __instance.Chat.gameObject != null)
                         __instance.Chat.gameObject.SetActive(true);
 
                     object aspectPosition = ElysiumModMenuGUI.GetHudAspectPosition(__instance);
@@ -405,7 +437,7 @@ namespace ElysiumModMenu
                         }
                     }
 
-                    if (!hudModalActive && ElysiumModMenuGUI.cameraZoom && __instance.TaskPanel != null && ShipStatus.Instance != null && MeetingHud.Instance == null)
+                    if (!hudModalActive && ElysiumModMenuGUI.cameraZoom && __instance.TaskPanel != null && __instance.TaskPanel.gameObject != null && ShipStatus.Instance != null && MeetingHud.Instance == null)
                         __instance.TaskPanel.gameObject.SetActive(true);
                 }
                 catch { }
@@ -413,10 +445,37 @@ namespace ElysiumModMenu
         }
 
 [HarmonyPatch(typeof(FullAccount), nameof(FullAccount.CanSetCustomName))]
-        public static class FullAccount_CanSetCustomName_Patch { public static void Prefix(ref bool canSetName) { try { if (ElysiumModMenuGUI.unlockFeatures) canSetName = true; } catch { } } }
+        public static class FullAccount_CanSetCustomName_Patch { public static void Prefix(ref bool canSetName) { try { if (ElysiumModMenuGUI.unlockFeatures || ElysiumModMenuGUI.guestExtraFeatures) canSetName = true; } catch { } } }
 
 [HarmonyPatch(typeof(AccountManager), nameof(AccountManager.CanPlayOnline))]
-        public static class AccountManager_CanPlayOnline_Patch { public static void Postfix(ref bool __result) { try { if (ElysiumModMenuGUI.unlockFeatures) __result = true; } catch { } } }
+        public static class AccountManager_CanPlayOnline_Patch { public static void Postfix(ref bool __result) { try { if (ElysiumModMenuGUI.unlockFeatures || ElysiumModMenuGUI.bypassAgeRestrictions) __result = true; } catch { } } }
+
+[HarmonyPatch(typeof(EOSManager), "IsFreechatAllowed")]
+        public static class EOSManager_IsFreechatAllowed_Patch { public static void Postfix(ref bool __result) { try { if (ElysiumModMenuGUI.guestExtraFeatures) __result = true; } catch { } } }
+
+[HarmonyPatch(typeof(EOSManager), "IsFriendsListAllowed")]
+        public static class EOSManager_IsFriendsListAllowed_Patch { public static void Postfix(ref bool __result) { try { if (ElysiumModMenuGUI.guestExtraFeatures) __result = true; } catch { } } }
+
+[HarmonyPatch(typeof(EOSManager), "IsMinorOrWaiting")]
+        public static class EOSManager_IsMinorOrWaiting_Patch { public static void Postfix(ref bool __result) { try { if (ElysiumModMenuGUI.bypassAgeRestrictions) __result = false; } catch { } } }
+
+[HarmonyPatch(typeof(EOSManager), "IsAllowedOnline")]
+        public static class EOSManager_IsAllowedOnline_Patch { public static void Prefix(ref bool canOnline) { try { if (ElysiumModMenuGUI.bypassAgeRestrictions) canOnline = true; } catch { } } }
+
+[HarmonyPatch(typeof(InnerNetClient), "JoinGame")]
+        public static class InnerNetClient_JoinGame_AccountReady_Patch
+        {
+            public static void Prefix()
+            {
+                try
+                {
+                    if (!ElysiumModMenuGUI.bypassAgeRestrictions) return;
+                    if (AmongUs.Data.DataManager.Player == null || AmongUs.Data.DataManager.Player.Account == null) return;
+                    AmongUs.Data.DataManager.Player.Account.LoginStatus = (EOSManager.AccountLoginStatus)1;
+                }
+                catch { }
+            }
+        }
 
 [HarmonyPatch(typeof(EngineerRole), "FixedUpdate")]
         public static class EngineerCheatsPatch
@@ -540,8 +599,9 @@ private static bool TrySetCooldownMember(object target, float value)
                     if (!ElysiumModMenuGUI.spamReportBodies) return;
                     if (PlayerControl.LocalPlayer == null || PlayerControl.LocalPlayer.Data == null || PlayerControl.LocalPlayer.Data.IsDead) return;
                     if (target == null || target.Data == null || !target.Data.IsDead) return;
+                    if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost) return;
 
-                    PlayerControl.LocalPlayer.CmdReportDeadBody(target.Data);
+                    ElysiumModMenuGUI.TryOpenModdedMeeting(PlayerControl.LocalPlayer, target.Data);
                 }
                 catch { }
             }
@@ -674,7 +734,7 @@ private static bool TrySetCooldownMember(object target, float value)
                     if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost) return;
                     if (!ElysiumModMenuGUI.IsLocalPhantomVanished()) return;
 
-                    __result = ElysiumModMenuGUI.IsMalumValidKillTarget(target);
+                    __result = ElysiumModMenuGUI.IsElysiumValidKillTarget(target);
                 }
                 catch { }
             }
@@ -691,7 +751,7 @@ private static bool TrySetCooldownMember(object target, float value)
                     if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost) return true;
                     if (__instance != PlayerControl.LocalPlayer) return true;
                     if (!ElysiumModMenuGUI.IsLocalPhantomVanished()) return true;
-                    if (target == null || target.Data == null || !ElysiumModMenuGUI.IsMalumValidKillTarget(target.Data)) return true;
+                    if (target == null || target.Data == null || !ElysiumModMenuGUI.IsElysiumValidKillTarget(target.Data)) return true;
 
                     PlayerControl.LocalPlayer.RpcMurderPlayer(target, true);
                     return false;
@@ -708,7 +768,7 @@ private static bool TrySetCooldownMember(object target, float value)
                 try
                 {
                     if (!ElysiumModMenuGUI.killAnyone || __instance != PlayerControl.LocalPlayer) return true;
-                    if (target == null || target.Data == null || !ElysiumModMenuGUI.IsMalumValidKillTarget(target.Data)) return true;
+                    if (target == null || target.Data == null || !ElysiumModMenuGUI.IsElysiumValidKillTarget(target.Data)) return true;
                     if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost) return true;
                     if (ElysiumModMenuGUI.killWhileVanishedHostOnly && ElysiumModMenuGUI.IsLocalPhantomVanished()) return true;
 
@@ -722,7 +782,7 @@ private static bool TrySetCooldownMember(object target, float value)
 [HarmonyPatch(typeof(ImpostorRole), "IsValidTarget")]
         public static class ImpostorKillAnyonePatch
         {
-            public static void Postfix(NetworkedPlayerInfo target, ref bool __result) { try { if (ElysiumModMenuGUI.killAnyone) __result = ElysiumModMenuGUI.IsMalumValidKillTarget(target); } catch { } }
+            public static void Postfix(NetworkedPlayerInfo target, ref bool __result) { try { if (ElysiumModMenuGUI.killAnyone) __result = ElysiumModMenuGUI.IsElysiumValidKillTarget(target); } catch { } }
         }
 
 private void teleportToPlayer(PlayerControl t)

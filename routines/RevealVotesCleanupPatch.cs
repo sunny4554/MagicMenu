@@ -46,17 +46,32 @@ public static class RevealVotesCleanupPatch
         if (!ElysiumModMenuGUI.RevealVotesEnabled) return;
         try
         {
-            foreach (var item in __instance.playerStates)
+            RevealVotesPatch.ClearVoteIcons(__instance);
+            RevealVotesPatch.ClearMeetingVotes(false);
+        }
+        catch { }
+    }
+
+    public static void Postfix(MeetingHud __instance, Il2CppStructArray<MeetingHud.VoterState> states)
+    {
+        if (!ElysiumModMenuGUI.RevealVotesEnabled) return;
+        try
+        {
+            RevealVotesPatch.ClearVoteIcons(__instance);
+            RevealVotesPatch.ClearMeetingVotes(false);
+
+            if (states != null)
             {
-                if (item == null) continue;
-                var component = item.transform.GetComponent<VoteSpreader>();
-                if (component != null && component.Votes.Count != 0)
+                foreach (var state in states)
                 {
-                    foreach (var sprite in component.Votes) Object.DestroyImmediate(sprite.gameObject);
-                    component.Votes.Clear();
+                    byte votedForId = RevealVotesPatch._voteTargets.TryGetValue(state.VoterId, out byte rememberedVote)
+                        ? rememberedVote
+                        : state.VotedForId;
+                    RevealVotesPatch.DrawVote(__instance, state.VoterId, votedForId);
                 }
             }
-            RevealVotesPatch._votedPlayers.Clear();
+
+            RevealVotesPatch.DrawRememberedVotes(__instance);
         }
         catch { }
     }

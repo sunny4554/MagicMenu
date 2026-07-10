@@ -489,7 +489,9 @@ private void DrawAnimatedSwitch(Rect boxRect, bool value, string animKey)
 
 private bool DrawToggle(bool value, string text, int width = 0)
         {
-            GUILayout.BeginHorizontal(GUILayout.MinWidth(width > 0 ? width : 200), GUILayout.Height(20));
+            int reqW = width > 0 ? width : 200;
+            int finalW = Mathf.RoundToInt(Mathf.Clamp(reqW, 82f, Mathf.Max(82f, GetMenuBodyWidth() - 18f)));
+            GUILayout.BeginHorizontal(GUILayout.Width(finalW), GUILayout.Height(20));
 
             Rect animSwitchRect = GUILayoutUtility.GetRect(30f, 16f, GUILayout.Width(30f), GUILayout.Height(16f));
             bool clickedBox = GUI.Button(animSwitchRect, "", value ? trackOnStyle : trackOffStyle);
@@ -499,7 +501,7 @@ private bool DrawToggle(bool value, string text, int width = 0)
 
             GUIStyle toggleTextStyle = new GUIStyle(toggleLabelStyle)
             {
-                clipping = TextClipping.Overflow,
+                clipping = TextClipping.Clip,
                 wordWrap = false,
                 richText = true,
                 stretchWidth = false,
@@ -507,7 +509,7 @@ private bool DrawToggle(bool value, string text, int width = 0)
             };
 
             GUIContent toggleContent = new GUIContent(text);
-            float toggleTextWidth = Mathf.Ceil(toggleTextStyle.CalcSize(toggleContent).x) + 8f;
+            float toggleTextWidth = Mathf.Min(Mathf.Ceil(toggleTextStyle.CalcSize(toggleContent).x) + 8f, Mathf.Max(40f, finalW - 42f));
             Rect textRect = GUILayoutUtility.GetRect(toggleTextWidth, 18f, GUILayout.Width(toggleTextWidth), GUILayout.Height(18f));
             GUI.Label(textRect, toggleContent, toggleTextStyle);
 

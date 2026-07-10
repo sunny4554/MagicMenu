@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -21,8 +22,9 @@ namespace ElysiumModMenu
 
     internal static class ElysiumUpdater
     {
-        internal const string ApiUrl = "https://api.github.com/repos/meowchelo/ElysiumModMenu/releases/latest";
-        internal const string ReleasesUrl = "https://github.com/meowchelo/ElysiumModMenu/releases/latest";
+        internal const string ApiUrl = "https://api.github.com/repos/Wextikit/ElysiumModMenu/releases/latest";
+        internal const string LatestPage = "https://github.com/Wextikit/ElysiumModMenu/releases/latest";
+        internal const string ReleasesUrl = "https://github.com/Wextikit/ElysiumModMenu/releases";
 
         internal static ElysiumUpdateState State { get; private set; } = ElysiumUpdateState.Idle;
         internal static string LatestVersion { get; private set; } = string.Empty;
@@ -130,7 +132,7 @@ namespace ElysiumModMenu
             if (string.IsNullOrEmpty(tag)) return false;
 
             int assetsIndex = json.IndexOf("\"assets\"", StringComparison.Ordinal);
-            if (assetsIndex < 0) return false;
+            if (assetsIndex < 0) return true;
 
             int position = assetsIndex;
             while (true)
@@ -156,7 +158,7 @@ namespace ElysiumModMenu
                 position = nameIndex + 6;
             }
 
-            return false;
+            return true;
         }
 
         private static string ExtractString(string json, string key)
@@ -189,6 +191,20 @@ namespace ElysiumModMenu
             {
                 return false;
             }
+        }
+
+        internal static string BuildTagOnlyJson(string tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag)) return string.Empty;
+            var sb = new StringBuilder(96);
+            sb.Append("{\"tag_name\":\"");
+            foreach (char c in tag)
+            {
+                if (c == '"' || c == '\\') sb.Append('\\').Append(c);
+                else if (c >= 0x20) sb.Append(c);
+            }
+            sb.Append("\",\"assets\":[]}");
+            return sb.ToString();
         }
     }
 
@@ -258,6 +274,13 @@ namespace ElysiumModMenu
             if (ElysiumUpdater.State != ElysiumUpdateState.Available || downloadTask != null)
                 return;
 
+            if (string.IsNullOrWhiteSpace(ElysiumUpdater.DownloadUrl))
+            {
+                try { GUIUtility.systemCopyBuffer = ElysiumUpdater.ReleasesUrl; } catch { }
+                try { Application.OpenURL(ElysiumUpdater.ReleasesUrl); } catch { }
+                return;
+            }
+
             try
             {
                 ElysiumUpdater.StartDownload();
@@ -275,13 +298,48 @@ namespace ElysiumModMenu
             try
             {
                 ElysiumUpdater.StartCheck();
-                checkTask = httpClient.GetStringAsync(ElysiumUpdater.ApiUrl);
+                checkTask = Task.Run(() => FetchReleaseJson());
             }
             catch (Exception error)
             {
                 ElysiumUpdater.Fail(error.GetType().Name + ": " + error.Message);
                 checkTask = null;
             }
+        }
+
+        [HideFromIl2Cpp]
+        private static string FetchReleaseJson()
+        {
+            try
+            {
+                return httpClient.GetStringAsync(ElysiumUpdater.ApiUrl).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                string tag = TagFromRedirect();
+                string json = ElysiumUpdater.BuildTagOnlyJson(tag);
+                if (!string.IsNullOrEmpty(json)) return json;
+                throw;
+            }
+        }
+
+        [HideFromIl2Cpp]
+        private static string TagFromRedirect()
+        {
+            try
+            {
+                var resp = httpClient.GetAsync(ElysiumUpdater.LatestPage, HttpCompletionOption.ResponseHeadersRead).GetAwaiter().GetResult();
+                string url = resp.RequestMessage != null && resp.RequestMessage.RequestUri != null
+                    ? resp.RequestMessage.RequestUri.ToString()
+                    : null;
+                if (!string.IsNullOrEmpty(url))
+                {
+                    int i = url.LastIndexOf("/tag/", StringComparison.Ordinal);
+                    if (i >= 0) return url.Substring(i + 5);
+                }
+            }
+            catch { }
+            return null;
         }
 
         [HideFromIl2Cpp]

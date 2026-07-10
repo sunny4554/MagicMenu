@@ -173,7 +173,7 @@ private void DrawOutfitsTab()
                 {
                     int pick = freeColors[Mathf.Clamp(selectedFreeColorIndex, 0, freeCount - 1)];
                     PlayerControl.LocalPlayer.CmdCheckColor((byte)pick);
-                    ShowNotification(L("Applied free color: ", "Применён свободный цвет: ") + SafeColorName(pick));
+                    ShowNotification("Applied free color: " + SafeColorName(pick));
                 }
             }
             GUI.enabled = true;
@@ -422,27 +422,27 @@ public static void ApplyLevelSpoofValue(uint displayLevel, bool save = true)
             if (index < 0 || index >= favoriteOutfitSlots.Length) return;
             if (!TryCaptureFavoriteOutfit(source, out FavoriteOutfitSnapshot outfit))
             {
-                ShowNotification($"<color=#FF4444>[OUTFIT]</color> {L("Player outfit is not ready.", "Образ игрока еще не готов.")}");
+                ShowNotification("<color=#FF4444>[OUTFIT]</color> Player outfit is not ready.");
                 return;
             }
 
             favoriteOutfitSlots[index] = SerializeFavoriteOutfit(outfit);
             SaveConfig();
-            ShowNotification($"<color=#00FFAA>[OUTFIT]</color> {L("Saved slot", "Сохранен слот")} {index + 1}");
+            ShowNotification($"<color=#00FFAA>[OUTFIT]</color> Saved slot {index + 1}");
         }
 
         private void ApplyFavoriteOutfitSlot(int index, FavoriteOutfitSnapshot outfit, bool hasOutfit)
         {
             if (!hasOutfit)
             {
-                ShowNotification($"<color=#FFAA00>[OUTFIT]</color> {L("Slot is empty.", "Слот пуст.")}");
+                ShowNotification("<color=#FFAA00>[OUTFIT]</color> Slot is empty.");
                 return;
             }
 
             try
             {
                 ApplyFavoriteOutfit(PlayerControl.LocalPlayer, outfit);
-                ShowNotification($"<color=#00FFAA>[OUTFIT]</color> {L("Applied slot", "Надет слот")} {index + 1}");
+                ShowNotification($"<color=#00FFAA>[OUTFIT]</color> Applied slot {index + 1}");
             }
             catch { }
         }
@@ -452,7 +452,7 @@ public static void ApplyLevelSpoofValue(uint displayLevel, bool save = true)
             if (index < 0 || index >= favoriteOutfitSlots.Length) return;
             favoriteOutfitSlots[index] = string.Empty;
             SaveConfig();
-            ShowNotification($"<color=#AAAAAA>[OUTFIT]</color> {L("Cleared slot", "Очищен слот")} {index + 1}");
+            ShowNotification($"<color=#AAAAAA>[OUTFIT]</color> Cleared slot {index + 1}");
         }
         public static bool removePenalty = true;
 

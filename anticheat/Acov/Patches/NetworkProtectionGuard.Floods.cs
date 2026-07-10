@@ -368,7 +368,7 @@ private static bool IsLobbyJoinSyncGrace(PlayerControl player = null, int client
 
 		if (rpcByte == 4 && MeetingHud.Instance == null && !((InnerNetObject)player).AmOwner)
 		{
-			BlockRpc(player, clientId, "Exiled вне встречи", "RPC заблокирован.");
+			BlockRpc(player, clientId, "Exiled outside meeting", "RPC blocked.");
 			return true;
 		}
 
@@ -389,7 +389,7 @@ private static bool IsLobbyJoinSyncGrace(PlayerControl player = null, int client
 
 		if (clientId >= 0 && HitLimit(ChatByClient, clientId, Time.realtimeSinceStartup, ChatWindowSeconds, MaxChatMessagesPerWindow, out int chatCount))
 		{
-			BlockRpc(player, clientId, "Chat flood", $"{chatCount}/{MaxChatMessagesPerWindow} за {ChatWindowSeconds:0.0}с.");
+			BlockRpc(player, clientId, "Chat flood", $"{chatCount}/{MaxChatMessagesPerWindow} in {ChatWindowSeconds:0.0}s.");
 			return true;
 		}
 
@@ -399,13 +399,13 @@ private static bool IsLobbyJoinSyncGrace(PlayerControl player = null, int client
 			string text = copy.ReadString();
 			if (IsDangerousChat(text))
 			{
-				BlockRpc(player, clientId, "Опасный чат", "Форматирование сообщения заблокировано.");
+				BlockRpc(player, clientId, "Dangerous chat", "Message formatting blocked.");
 				return true;
 			}
 		}
 		catch (Exception error)
 		{
-			BlockRpc(player, clientId, "Поврежденный чат", error.Message);
+			BlockRpc(player, clientId, "Malformed chat", error.Message);
 			return true;
 		}
 
@@ -1151,6 +1151,10 @@ private static void DisconnectIfHost(int clientId, bool ban, string attackType, 
 		if (clientId == client.ClientId || clientId == client.HostId)
 		{
 			AcovPlugin.Logger?.LogWarning((object)$"Network protection refused to {(ban ? "ban" : "kick")} local/host client id {clientId}.");
+			return;
+		}
+		if (ElysiumModMenu.ElysiumModMenuGUI.IsProtectedFromAnticheat(clientId))
+		{
 			return;
 		}
 

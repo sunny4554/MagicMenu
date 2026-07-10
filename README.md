@@ -6,20 +6,20 @@
 
 <br>
 
-<a href="https://github.com/meowchelo/ElysiumModMenu/releases/latest">
+<a href="https://github.com/Wextikit/ElysiumModMenu/releases/latest">
   <img src="https://img.shields.io/badge/Download-Latest%20Release-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="Download">
 </a>
 <a href="docs/CHANGELOG.md">
   <img src="https://img.shields.io/badge/Changelog-View-0969da?style=for-the-badge" alt="Changelog">
 </a>
-<a href="https://github.com/meowchelo/ElysiumModMenu/issues">
+<a href="https://github.com/Wextikit/ElysiumModMenu/issues">
   <img src="https://img.shields.io/badge/Report-Issue-da3633?style=for-the-badge&logo=github&logoColor=white" alt="Report an issue">
 </a>
 
 <br>
 <br>
 
-<a href="https://discord.gg/DpeWsCqZ">
+<a href="https://discord.gg/CdrpKJzFp">
   <img src="https://img.shields.io/badge/Discord-ElysiumModMenu-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord">
 </a>
 
@@ -99,7 +99,7 @@ The first launch may take longer than usual and a console window may appear. Thi
 
 ### 3. Install Elysium Mod Menu
 
-Download `ElysiumModMenu.dll` from the [latest Elysium release](https://github.com/meowchelo/ElysiumModMenu/releases/latest).
+Download `ElysiumModMenu.dll` from the [latest Elysium release](https://github.com/Wextikit/ElysiumModMenu/releases/latest).
 
 Place the file here:
 
@@ -124,7 +124,7 @@ To update the menu:
 
 1. ♯ Close Among Us.
 
-2. ♯ Download the new `ElysiumModMenu.dll` from the [latest release](https://github.com/meowchelo/ElysiumModMenu/releases/latest).
+2. ♯ Download the new `ElysiumModMenu.dll` from the [latest release](https://github.com/Wextikit/ElysiumModMenu/releases/latest).
 
 3. ♯ Replace the old file in:
 
@@ -148,7 +148,7 @@ To update the menu:
 | iOS                         | Not supported                                         |
 | Switch / Xbox / PlayStation | Not supported                                         |
 
-The Platform Spoof option can display Epic, Steam, Mac, Microsoft, Itch, iOS, Android, Switch, Xbox, PlayStation, or Starlight to other clients. These are spoofing targets, not platforms on which the mod itself can run.
+The Platform Spoof option can display supported platform labels to other clients. These are spoofing targets, not platforms on which the mod itself can run.
 
 ## ♯ Diagnostic logs
 
@@ -185,8 +185,8 @@ Among Us/BepInEx/LogOutput.log
 
 ##  ♡ Community and support
 
-* Join the [ElysiumModMenu Discord](https://discord.gg/DpeWsCqZ) for announcements, help, previews, and community discussion.
-* Use [GitHub Issues](https://github.com/meowchelo/ElysiumModMenu/issues) for reproducible bugs and feature requests.
+* Join the [ElysiumModMenu Discord](https://discord.gg/CdrpKJzFp) for announcements, help, previews, and community discussion.
+* Use [GitHub Issues](https://github.com/Wextikit/ElysiumModMenu/issues) for reproducible bugs and feature requests.
 * When reporting a problem, include the menu version, game platform, what happened, reproduction steps, and the relevant log excerpt.
 * Remove room codes, Friend Codes, PUIDs, chat messages, and personal paths before posting logs publicly.
 

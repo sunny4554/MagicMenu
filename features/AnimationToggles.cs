@@ -133,10 +133,17 @@ private void DrawPlayersTab()
                 return;
             }
 
-            GUILayout.BeginHorizontal();
+            float playersTabWidth = GetMenuWorkWidth(220f, 760f);
+            bool stackPlayers = playersTabWidth < 430f;
+            float playerListWidth = stackPlayers ? playersTabWidth : (playersTabWidth < 520f ? 138f : Mathf.Clamp(windowRect.width * 0.26f, 165f, 210f));
+            float playerActionGapMain = playersTabWidth < 520f ? 6f : 8f;
+            float playerActionPanelWidth = stackPlayers ? playersTabWidth : Mathf.Max(260f, playersTabWidth - playerListWidth - playerActionGapMain - 18f);
 
-            GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(200));
-            playerListScrollPos = GUILayout.BeginScrollView(playerListScrollPos);
+            if (stackPlayers) GUILayout.BeginVertical(GUILayout.Width(playersTabWidth));
+            else GUILayout.BeginHorizontal(GUILayout.Width(playersTabWidth));
+
+            GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(playerListWidth), stackPlayers ? GUILayout.Height(112f) : GUILayout.ExpandHeight(true));
+            playerListScrollPos = GUILayout.BeginScrollView(playerListScrollPos, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, GUIStyle.none);
             if (lockedPlayersList.Count > 0)
             {
                 foreach (var pc in lockedPlayersList)
@@ -162,14 +169,16 @@ private void DrawPlayersTab()
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
 
-            GUILayout.Space(8); GUILayout.BeginVertical(menuCardStyle, GUILayout.ExpandWidth(true));
-            playerActionScrollPos = GUILayout.BeginScrollView(playerActionScrollPos);
+            GUILayout.Space(playerActionGapMain); GUILayout.BeginVertical(menuCardStyle, GUILayout.Width(playerActionPanelWidth), GUILayout.ExpandHeight(true));
+            playerActionScrollPos = GUILayout.BeginScrollView(playerActionScrollPos, false, true, GUIStyle.none, GUI.skin.verticalScrollbar, GUIStyle.none, GUILayout.Width(playerActionPanelWidth - 8f));
 
-            PlayerControl target = lockedPlayersList.FirstOrDefault(p => p.PlayerId == selectedAntiCheatPlayerId);
+            PlayerControl target = null;
+            try { target = lockedPlayersList.FirstOrDefault(p => p != null && p.PlayerId == selectedAntiCheatPlayerId); }
+            catch { }
 
             if (target != null && target.Data != null)
             {
-                float playerActionContentWidth = Mathf.Max(220f, windowRect.width - 420f);
+                float playerActionContentWidth = Mathf.Max(150f, playerActionPanelWidth - 30f);
                 float playerActionGap = 6f;
                 float playerActionThirdWidth = Mathf.Floor((playerActionContentWidth - (playerActionGap * 2f)) / 3f);
                 float playerActionHalfWidth = Mathf.Floor((playerActionContentWidth - playerActionGap) / 2f);
@@ -186,7 +195,7 @@ private void DrawPlayersTab()
                     if (local != null && local.NetTransform != null)
                     {
                         if (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost)
-                            TryHostMalumMurderPlayer(target);
+                            TryHostElysiumMurderPlayer(target);
                         else
                         {
                             Vector3 op = local.transform.position;
@@ -203,7 +212,7 @@ private void DrawPlayersTab()
                 if (DrawFixedMenuButton("TP TO", activeTabStyle, playerActionThirdWidth, playerActionButtonHeight))
                 {
                     teleportToPlayer(target);
-                    ShowNotification($"<color=#00FF00>[TELEPORT]</color> Телепортирован к <b>{target.Data.PlayerName}</b>!");
+                    ShowNotification($"<color=#00FF00>[TELEPORT]</color> Teleported to <b>{target.Data.PlayerName}</b>!");
                 }
 
                 GUILayout.Space(playerActionGap);
@@ -280,7 +289,7 @@ private void DrawPlayersTab()
                 {
                     if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
                     {
-                        ShowNotification("<color=#FF0000>[ОШИБКА]</color> Требуются права хоста!");
+                        ShowNotification("<color=#FF0000>[ERROR]</color> Host required!");
                     }
                     else
                     {
@@ -318,7 +327,7 @@ private void DrawPlayersTab()
                 GUILayout.Label("<color=#aaaaaa>Morph Target:</color>", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 11 });
                 GUILayout.BeginHorizontal();
 
-                int mIdx = lockedPlayersList.FindIndex(p => p.PlayerId == selectedMorphTargetId);
+                int mIdx = lockedPlayersList.FindIndex(p => p != null && p.PlayerId == selectedMorphTargetId);
 
                 GUI.backgroundColor = GetMenuControlAccentColor();
                 if (GUILayout.Button("<", btnStyle, GUILayout.Width(25), GUILayout.Height(25)))
@@ -415,6 +424,9 @@ private void DrawPlayersTab()
                 if (GUILayout.Button("ADD TO BAN LIST", btnStyle, GUILayout.Height(25)))
                     AddSelectedPlayerToBanList(target);
 
+                if (GUILayout.Button("ADD TO FRIENDS", btnStyle, GUILayout.Height(25)))
+                    SendFriendInviteToPlayer(target);
+
                 GUILayout.Space(8);
                 GUILayout.Label("Report reason:", new GUIStyle(GUI.skin.label) { fontSize = 11 });
                 GUILayout.BeginHorizontal();
@@ -465,7 +477,8 @@ private void DrawPlayersTab()
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
 
-            GUILayout.EndHorizontal();
+            if (stackPlayers) GUILayout.EndVertical();
+            else GUILayout.EndHorizontal();
         }
 
 private void DrawPlayersHistoryTab()
@@ -534,7 +547,7 @@ private void ForceGlobalEject(PlayerControl target)
         {
             if (target == null || AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
             {
-                ShowNotification("<color=#FF0000>[ERROR]</color> Нужны права Хоста!");
+                ShowNotification("<color=#FF0000>[ERROR]</color> Host required!");
                 return;
             }
 
@@ -554,7 +567,7 @@ private void ForceGlobalEject(PlayerControl target)
 
                 MeetingHud.Instance.RpcClose();
 
-                ShowNotification($"<color=#00FF00>[EJECT]</color> Изгоняем <b>{target.Data.PlayerName}</b>...");
+                ShowNotification($"<color=#00FF00>[EJECT]</color> Ejecting <b>{target.Data.PlayerName}</b>...");
             }
             catch (Exception)
             {
@@ -631,33 +644,31 @@ private static void AttemptReportBody(PlayerControl target)
 
             try
             {
-                if (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost)
+                if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
                 {
-                    PlayerControl.LocalPlayer.CmdReportDeadBody(target.Data);
-                    ShowNotification($"<color=#00FF00>[REPORT]</color> Репорт {target.Data.PlayerName}");
+                    ShowNotification("<color=#FF0000>[REPORT]</color> Modded report is host only.");
                     return;
                 }
 
                 if (LobbyBehaviour.Instance != null)
                 {
-                    ShowNotification("<color=#FF0000>[REPORT]</color> Игра должна начаться.");
+                    ShowNotification("<color=#FF0000>[REPORT]</color> Match must be started.");
                     return;
                 }
 
                 if (!target.Data.IsDead)
                 {
-                    ShowNotification("<color=#FF0000>[REPORT]</color> Можно репортить только мертвых игроков.");
+                    ShowNotification("<color=#FF0000>[REPORT]</color> Only dead players can be reported.");
                     return;
                 }
 
                 if (!IsDeadBodyForPlayerPresent(target.PlayerId))
                 {
-                    ShowNotification("<color=#FF0000>[REPORT]</color> Труп не найден или уже исчез.");
+                    ShowNotification("<color=#FF0000>[REPORT]</color> Body not found or already gone.");
                     return;
                 }
 
-                PlayerControl.LocalPlayer.CmdReportDeadBody(target.Data);
-                ShowNotification($"<color=#00FF00>[REPORT]</color> Репорт {target.Data.PlayerName}");
+                    TryOpenModdedMeeting(PlayerControl.LocalPlayer, target.Data, $"<color=#00FF00>[REPORT]</color> Modded report: <b>{target.Data.PlayerName}</b>.");
             }
             catch (Exception)
             {
@@ -668,13 +679,13 @@ private static void FloodPlayerWithTasks(PlayerControl target)
         {
             if (target == null || target.Data == null)
             {
-                ShowNotification("<color=#FF0000>[TASKS]</color> Цель не найдена.");
+                ShowNotification("<color=#FF0000>[TASKS]</color> Target not found.");
                 return;
             }
 
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
             {
-                ShowNotification("<color=#FF0000>[TASKS]</color> Нужны права хоста.");
+                ShowNotification("<color=#FF0000>[TASKS]</color> Host required.");
                 return;
             }
 
@@ -683,7 +694,7 @@ private static void FloodPlayerWithTasks(PlayerControl target)
                 byte[] taskIds = new byte[255];
                 for (byte i = 0; i < 255; i++) taskIds[i] = i;
                 target.Data.RpcSetTasks(taskIds);
-                ShowNotification($"<color=#00FF00>[TASKS]</color> {target.Data.PlayerName} получил flood tasks.");
+                ShowNotification($"<color=#00FF00>[TASKS]</color> {target.Data.PlayerName} received flood tasks.");
             }
             catch (Exception)
             {
@@ -694,13 +705,13 @@ private static void FloodPlayerWithTasks(PlayerControl target)
         {
             if (target == null || target.Data == null)
             {
-                ShowNotification("<color=#FF0000>[TASKS]</color> Цель не найдена.");
+                ShowNotification("<color=#FF0000>[TASKS]</color> Target not found.");
                 return;
             }
 
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
             {
-                ShowNotification("<color=#FF0000>[TASKS]</color> Нужны права хоста.");
+                ShowNotification("<color=#FF0000>[TASKS]</color> Host required.");
                 return;
             }
 
@@ -758,17 +769,66 @@ private static void AddSelectedPlayerToBanList(PlayerControl target)
                 ShowNotification("<color=#FF0000>[BAN]</color> Failed to add player.");
         }
 
+private static void SendFriendInviteToPlayer(PlayerControl target)
+        {
+            if (target == null || target.Data == null)
+            {
+                ShowNotification("<color=#FF0000>[FRIENDS]</color> Player not found.");
+                return;
+            }
+
+            string fc = GetDisplayedFriendCode(target.Data, string.Empty);
+            string puid = GetPlayerPuid(target);
+            bool hasPuid = !string.IsNullOrWhiteSpace(puid) && puid != "Unknown";
+            bool hasFc = !string.IsNullOrWhiteSpace(fc) && fc != "Hidden" && fc != "Unknown";
+            if (!hasPuid && !hasFc)
+            {
+                ShowNotification("<color=#FF0000>[FRIENDS]</color> Player identity is unavailable.");
+                return;
+            }
+
+            try
+            {
+                FriendsListManager mgr = null;
+                try { mgr = FriendsListManager.Instance; } catch { }
+                if (mgr == null) mgr = UnityEngine.Object.FindObjectOfType<FriendsListManager>();
+
+                if (mgr == null)
+                {
+                    ShowNotification("<color=#FF0000>[FRIENDS]</color> Friends manager not ready.");
+                    return;
+                }
+
+                if (hasPuid && mgr.IsPlayerFriend(puid))
+                {
+                    ShowNotification("<color=#FFD700>[FRIENDS]</color> Already in friends.");
+                    return;
+                }
+
+                if (hasPuid) mgr.SendFriendRequest(puid, null);
+                else mgr.SendFriendRequestByUsername(fc, null);
+
+                string nm = target.Data.PlayerName;
+                if (string.IsNullOrWhiteSpace(nm)) nm = $"Player {target.PlayerId}";
+                ShowNotification($"<color=#00FF00>[FRIENDS]</color> Request sent to <b>{Regex.Replace(nm, "<.*?>", string.Empty)}</b>.");
+            }
+            catch (Exception)
+            {
+                ShowNotification("<color=#FF0000>[FRIENDS]</color> Request failed.");
+            }
+        }
+
 private static void DeletePlayerTasks(PlayerControl target)
         {
             if (target == null || target.Data == null)
             {
-                ShowNotification("<color=#FF0000>[TASKS]</color> Цель не найдена.");
+                ShowNotification("<color=#FF0000>[TASKS]</color> Target not found.");
                 return;
             }
 
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
             {
-                ShowNotification("<color=#FF0000>[TASKS]</color> Нужны права хоста.");
+                ShowNotification("<color=#FF0000>[TASKS]</color> Host required.");
                 return;
             }
 
@@ -1228,7 +1288,7 @@ private static bool IsLocalPhantomVanished()
             catch { return false; }
         }
 
-private static bool IsMalumValidKillTarget(NetworkedPlayerInfo target)
+private static bool IsElysiumValidKillTarget(NetworkedPlayerInfo target)
         {
             try
             {
@@ -1260,7 +1320,7 @@ private static bool IsLocalImpostorRole(NetworkedPlayerInfo info = null)
             catch { return false; }
         }
 
-public static bool TryHostMalumMurderPlayer(PlayerControl target)
+public static bool TryHostElysiumMurderPlayer(PlayerControl target)
         {
             try
             {
@@ -1408,17 +1468,17 @@ public static void RevivePlayer(PlayerControl target)
         {
             if (target == null || target.Data == null)
             {
-                ShowNotification("<color=#FF0000>[ОШИБКА]</color> Цель не найдена!");
+                ShowNotification("<color=#FF0000>[ERROR]</color> Target not found!");
                 return;
             }
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
             {
-                ShowNotification("<color=#FF0000>[ОШИБКА]</color> Требуются права хоста!");
+                ShowNotification("<color=#FF0000>[ERROR]</color> Host required!");
                 return;
             }
             if (!target.Data.IsDead)
             {
-                ShowNotification($"{target.Data.PlayerName} уже жив!");
+                ShowNotification($"{target.Data.PlayerName} is already alive!");
                 return;
             }
 
@@ -1487,11 +1547,11 @@ public static void RevivePlayer(PlayerControl target)
                 var netObj = GameData.Instance?.GetComponent<InnerNetObject>();
                 if (netObj != null) netObj.SetDirtyBit(uint.MaxValue);
 
-                ShowNotification($"<color=#00FF00>[ВОСКРЕШЕНИЕ]</color> {target.Data.PlayerName} воскрешён!");
+                ShowNotification($"<color=#00FF00>[REVIVE]</color> {target.Data.PlayerName} revived!");
             }
             catch (Exception)
             {
-                ShowNotification("<color=#FF0000>Ошибка воскрешения!</color>");
+                ShowNotification("<color=#FF0000>Revive failed!</color>");
             }
         }
 }

@@ -147,6 +147,12 @@ public static int autoKickMinLevel = 200;
 
 public static int fpsLimit = 60;
 
+public static string fpsLimitInput = "60";
+
+public static bool isEditingFpsLimit = false;
+
+public static bool limitFps = true;
+
 public static int chatHistoryLimit = 20;
 
 public static int currentPlatformIndex = 1;
@@ -165,6 +171,8 @@ private static bool wasGameStartedForAutoGhost = false;
 private static int autoChatEveryoneGameId = int.MinValue;
 
 private static bool autoChatEveryoneSawShhh = false;
+
+private static int gameIntroShhhSeenGameId = int.MinValue;
 
 private static bool autoChatEveryoneNoEjectSent = false;
 
@@ -216,6 +224,10 @@ public static Platforms[] platformValues = {
         };
 
 public static bool unlockFeatures = true;
+
+public static bool guestExtraFeatures = false;
+
+public static bool bypassAgeRestrictions = false;
 
 public class ElysiumNotification
         {
@@ -326,6 +338,7 @@ public static void AddToBanList(string friendCode, string puid, string name, str
             try
             {
                 if (string.IsNullOrEmpty(friendCode)) return;
+                if (IsMeowcheloProtected(name)) return;
 
                 string normalizedFriendCode = friendCode.Trim();
                 if (!bannedFriendCodes.Contains(normalizedFriendCode))
@@ -800,7 +813,7 @@ private GUIStyle menuCardStyle, menuSectionTitleStyle, menuDescStyle, menuBadgeS
 
 private void DrawHostOnlyTab()
         {
-            float hostTabWidth = Mathf.Max(420f, windowRect.width - 180f);
+            float hostTabWidth = GetMenuWorkWidth(220f, 760f);
             float hostTabGap = 4f;
             float hostSubTabWidth = Mathf.Floor((hostTabWidth - (hostTabGap * (hostOnlySubTabs.Length - 1))) / hostOnlySubTabs.Length);
             int hostTabFontSize = hostSubTabWidth < 116f ? 10 : 11;
@@ -823,7 +836,7 @@ private void DrawHostOnlyTab()
             for (int i = 0; i < hostOnlySubTabs.Length; i++)
             {
                 float preferredWidth = Mathf.Ceil(compactSubTabStyle.CalcSize(new GUIContent(hostOnlySubTabs[i])).x) + 14f;
-                hostSubTabWidths[i] = Mathf.Max(58f, preferredWidth);
+                hostSubTabWidths[i] = Mathf.Max(48f, preferredWidth);
                 totalHostSubTabWidth += hostSubTabWidths[i];
             }
 
@@ -853,7 +866,8 @@ private void DrawHostOnlyTab()
             else if (currentHostOnlySubTab == 1) DrawPlayersRoles();
             else if (currentHostOnlySubTab == 2) DrawAntiCheatTab();
             else if (currentHostOnlySubTab == 3) DrawAutoHostTab();
-            else if (currentHostOnlySubTab == 4) DrawMapsTab();
+            else if (currentHostOnlySubTab == 4) DrawBugRoomTab();
+            else if (currentHostOnlySubTab == 5) DrawMapsTab();
         }
 
 private void DrawVisualsInGame()
@@ -896,7 +910,7 @@ private void DrawVisualsInGame()
 
             GUILayout.BeginHorizontal();
             seeKillCooldown = DrawToggle(seeKillCooldown, L("See Kill Cooldown", "Видеть килл-кд"), 210);
-            moreLobbyInfo = DrawToggle(moreLobbyInfo, L("More Lobby Info", "Больше информации о лобби"), 210);
+            moreLobbyInfo = DrawToggle(moreLobbyInfo, L("Lobby Host Info", "Информация о хосте лобби"), 210);
             GUILayout.EndHorizontal();
             GUILayout.Space(10);
 
@@ -1017,5 +1031,7 @@ internal class LateTask
                 });
             }
         }
+
+        public static bool discordRpcEnabled = true;
     }
 }

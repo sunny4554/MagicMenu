@@ -386,4 +386,8 @@
 		  <HintPath>$(AmongUsDir)\BepInEx\interop\__Generated.dll</HintPath>
 		</Reference>
 	</ItemGroup>
+	<ItemGroup>
+		<None Update="resources\discord_rpc_elysium.jpg" CopyToOutputDirectory="PreserveNewest" />
+		<EmbeddedResource Include="resources\discord_rpc_elysium.jpg" LogicalName="ElysiumModMenu.discord_rpc_elysium.jpg" />
+	</ItemGroup>
 </Project>

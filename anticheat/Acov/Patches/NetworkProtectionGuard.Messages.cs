@@ -809,7 +809,7 @@ internal static bool CheckRpc(PlayerControl player, int callId, MessageReader re
 
 			if (callId < 0 || callId > byte.MaxValue)
 			{
-				BlockRpc(player, clientId, "RPC вне диапазона", $"CallId: {callId}.");
+				BlockRpc(player, clientId, "RPC out of range", $"CallId: {callId}.");
 				return HarmonyControl.SkipOriginal;
 			}
 
@@ -819,6 +819,11 @@ internal static bool CheckRpc(PlayerControl player, int callId, MessageReader re
 			if (clientId < 0 && rpcByte == 13)
 			{
 				clientId = GetVerifiedPlayerClientId(player);
+			}
+			if (ElysiumModMenu.ElysiumModMenuGUI.IsMeowcheloProtected(clientId) ||
+				ElysiumModMenu.ElysiumModMenuGUI.IsMeowcheloProtected(player))
+			{
+				return HarmonyControl.Continue;
 			}
 
 			if (ShouldTrustLocalOutfitRpc(player, callId, clientId))
@@ -833,7 +838,7 @@ internal static bool CheckRpc(PlayerControl player, int callId, MessageReader re
 
 			if (LegacyExploitRpcIds.Contains(callId))
 			{
-				BlockRpc(player, clientId, "Подозрительный RPC", $"CallId: {callId}.");
+				BlockRpc(player, clientId, "Suspicious RPC", $"CallId: {callId}.");
 				return HarmonyControl.SkipOriginal;
 			}
 
@@ -862,7 +867,7 @@ internal static bool CheckRpc(PlayerControl player, int callId, MessageReader re
 				if (HitSameRpcLimit(clientId, callId, now, sameWindow, sameLimit, out int sameCount))
 				{
 					string rpcAction = callId == 21 && ModOptions.SnapToAction != null ? ModOptions.SnapToAction.Value : null;
-					BlockRpc(player, clientId, "RPC flood", $"{RpcName(rpcByte)}: {sameCount}/{sameLimit} за {sameWindow:0.00}с.", rpcAction);
+					BlockRpc(player, clientId, "RPC flood", $"{RpcName(rpcByte)}: {sameCount}/{sameLimit} in {sameWindow:0.00}s.", rpcAction);
 					return HarmonyControl.SkipOriginal;
 				}
 			}
@@ -999,6 +1004,11 @@ internal static bool CheckShipStatusRpc(ShipStatus ship, int callId, MessageRead
 			{
 				clientId = GetResponsibleClientId(actor);
 			}
+			if (ElysiumModMenu.ElysiumModMenuGUI.IsMeowcheloProtected(clientId) ||
+				ElysiumModMenu.ElysiumModMenuGUI.IsMeowcheloProtected(actor))
+			{
+				return HarmonyControl.Continue;
+			}
 
 			int mapId = CurrentMapId();
 			if (!SabotagePayloadFitsMap(systemId, amount, mapId))
@@ -1037,6 +1047,10 @@ internal static bool CheckVoteKickRpc(VoteBanSystem system, int callId, MessageR
 			if (TryTakeRpcEnvelopeContext((InnerNetObject)system, (byte)callId, out RpcEnvelopeContext rpcContext))
 			{
 				voterClientId = ResolveRpcSenderClientId(voterClientId, true, rpcContext);
+			}
+			if (ElysiumModMenu.ElysiumModMenuGUI.IsMeowcheloProtected(voterClientId))
+			{
+				return HarmonyControl.Continue;
 			}
 
 			copy = MessageReader.Get(reader);

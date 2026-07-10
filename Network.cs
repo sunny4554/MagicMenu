@@ -410,7 +410,7 @@ public class ModPlayer : MonoBehaviour
                     Debug.LogError("WARNING - " + reason);
                     _ = new LateTask(delegate
                     {
-                        DestroyableSingleton<HudManager>.Instance.Notifier.AddDisconnectMessage("<#ffff00>" + L("Got crash attempt - "  + reason, "Произошла попытка краша - " + reason));
+                        DestroyableSingleton<HudManager>.Instance.Notifier.AddDisconnectMessage("<#ffff00>Got crash attempt - " + reason);
                         if (banMalformedPacketSender)
                         {
                             KeyValuePair<int, float> keyValuePair = HandleMessage.LastJoin.OrderBy((KeyValuePair<int, float> pair) => pair.Value).FirstOrDefault();

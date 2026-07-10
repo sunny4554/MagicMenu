@@ -47,19 +47,19 @@ public static void MakePlayerGhost(PlayerControl target, bool impostorGhost = fa
         {
             if (target == null || target.Data == null)
             {
-                if (notify) ShowNotification("<color=#FF0000>[ОШИБКА]</color> Цель не найдена!");
+                if (notify) ShowNotification("<color=#FF0000>[ERROR]</color> Target not found!");
                 return;
             }
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
             {
-                if (notify) ShowNotification("<color=#FF0000>[ОШИБКА]</color> Требуются права хоста!");
+                if (notify) ShowNotification("<color=#FF0000>[ERROR]</color> Host required!");
                 return;
             }
             if (target.Data.IsDead)
             {
                 if (!TrySetGhostRole(target, impostorGhost, out _))
                     SetPlayerRole(target, impostorGhost ? RoleTypes.Impostor : (IsImpostorTeamRole(target.Data.RoleType) ? RoleTypes.Impostor : RoleTypes.Crewmate));
-                if (notify) ShowNotification($"{target.Data.PlayerName} уже призрак!");
+                if (notify) ShowNotification($"{target.Data.PlayerName} is already a ghost!");
                 return;
             }
 
@@ -76,11 +76,11 @@ public static void MakePlayerGhost(PlayerControl target, bool impostorGhost = fa
                 var netObj = GameData.Instance?.GetComponent<InnerNetObject>();
                 if (netObj != null) netObj.SetDirtyBit(uint.MaxValue);
 
-                if (notify) ShowNotification($"<color=#00FF00>[GHOST]</color> {target.Data.PlayerName} стал призраком ({methodUsed})!");
+                if (notify) ShowNotification($"<color=#00FF00>[GHOST]</color> {target.Data.PlayerName} became a ghost ({methodUsed})!");
             }
             catch (Exception)
             {
-                if (notify) ShowNotification("<color=#FF0000>Ошибка перевода в призрака!</color>");
+                if (notify) ShowNotification("<color=#FF0000>Failed to make ghost!</color>");
             }
         }
 
@@ -191,7 +191,7 @@ public static void SetAllPlayersGhost(bool impostorGhost)
         {
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
             {
-                ShowNotification("<color=#FF0000>[ОШИБКА]</color> Требуются права хоста!");
+                ShowNotification("<color=#FF0000>[ERROR]</color> Host required!");
                 return;
             }
             if (PlayerControl.AllPlayerControls == null) return;
@@ -206,7 +206,7 @@ public static void SetAllPlayersGhost(bool impostorGhost)
                 }
             }
 
-            ShowNotification($"<color=#00FF00>[GHOST]</color> {count} игрок(а/ов) стали {(impostorGhost ? "ghost impostor" : "призраками")}!");
+            ShowNotification($"<color=#00FF00>[GHOST]</color> {count} player(s) became {(impostorGhost ? "ghost impostors" : "ghosts")}!");
         }
 
 public static void ReviveAllPlayers()
@@ -299,7 +299,7 @@ public static void SetAllPlayersRole(RoleTypes role)
         {
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost)
             {
-                ShowNotification("<color=#FF0000>[ОШИБКА]</color> Требуются права хоста!");
+                ShowNotification("<color=#FF0000>[ERROR]</color> Host required!");
                 return;
             }
             if (PlayerControl.AllPlayerControls == null) return;
@@ -314,7 +314,7 @@ public static void SetAllPlayersRole(RoleTypes role)
                 }
             }
 
-            ShowNotification($"<color=#00FF00>[РОЛИ]</color> {count} игрок(а/ов) получили роль {GetRoleDisplayName(role)}!");
+            ShowNotification($"<color=#00FF00>[ROLES]</color> {count} player(s) received role {GetRoleDisplayName(role)}!");
         }
 
 public static void SetPlayerRole(PlayerControl target, RoleTypes newRole)

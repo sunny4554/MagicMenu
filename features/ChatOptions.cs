@@ -203,7 +203,7 @@ public static class ChatBubbleCopyHandler
                 lastCopyAt = now;
                 lastCopiedKey = copyKey;
                 lastClickAt = -10f;
-                ShowNotification($"<color=#66CCFF>[CHAT]</color> {L("Copied", "Скопировано")}");
+                ShowNotification("<color=#66CCFF>[CHAT]</color> Copied");
                 return true;
             }
 

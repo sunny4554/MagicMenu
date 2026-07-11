@@ -680,10 +680,135 @@ private static void ClearAutoTwoImpostorSelection()
             try
             {
                 foreach (byte playerId in autoTwoImpostorPlayerIds.ToArray())
+                {
+                    PlayerControl pc = FindPlayerById(playerId);
+                    string fc = GetRoleForceKey(pc);
+                    if (!string.IsNullOrEmpty(fc)) forcedImpostorFcs.Remove(fc);
                     forcedImpostors.Remove(playerId);
+                }
                 autoTwoImpostorPlayerIds.Clear();
             }
             catch { }
+        }
+
+public static string GetRoleForceKey(PlayerControl pc)
+        {
+            try
+            {
+                string fc = pc?.Data?.FriendCode;
+                if (string.IsNullOrWhiteSpace(fc) && pc != null && AmongUsClient.Instance != null)
+                {
+                    ClientData cd = AmongUsClient.Instance.GetClient(pc.OwnerId);
+                    if (cd != null) fc = cd.FriendCode;
+                }
+
+                if (string.IsNullOrWhiteSpace(fc)) return string.Empty;
+                fc = fc.Trim();
+                if (fc.Equals("unknown", System.StringComparison.OrdinalIgnoreCase) || fc == "----") return string.Empty;
+                return fc;
+            }
+            catch { return string.Empty; }
+        }
+
+private static PlayerControl FindPlayerById(byte id)
+        {
+            try
+            {
+                if (PlayerControl.AllPlayerControls == null) return null;
+                foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+                    if (pc != null && pc.PlayerId == id)
+                        return pc;
+            }
+            catch { }
+            return null;
+        }
+
+public static bool IsForcedImp(PlayerControl pc)
+        {
+            if (pc == null) return false;
+            string fc = GetRoleForceKey(pc);
+            if (!string.IsNullOrEmpty(fc) && forcedImpostorFcs.Contains(fc)) return true;
+            return forcedImpostors.Contains(pc.PlayerId);
+        }
+
+public static bool TryGetForcedRole(PlayerControl pc, out RoleTypes role)
+        {
+            role = RoleTypes.Crewmate;
+            if (pc == null) return false;
+            string fc = GetRoleForceKey(pc);
+            if (!string.IsNullOrEmpty(fc) && forcedPreGameRoleFcs.TryGetValue(fc, out role)) return true;
+            return forcedPreGameRoles.TryGetValue(pc.PlayerId, out role);
+        }
+
+private static void SetForcedImp(PlayerControl pc)
+        {
+            if (pc == null) return;
+            string fc = GetRoleForceKey(pc);
+            if (!string.IsNullOrEmpty(fc))
+            {
+                forcedPreGameRoleFcs.Remove(fc);
+                forcedImpostorFcs.Add(fc);
+            }
+            else
+            {
+                forcedPreGameRoles.Remove(pc.PlayerId);
+                forcedImpostors.Add(pc.PlayerId);
+            }
+        }
+
+private static void SetForcedRole(PlayerControl pc, RoleTypes role)
+        {
+            if (pc == null) return;
+            string fc = GetRoleForceKey(pc);
+            if (!string.IsNullOrEmpty(fc))
+            {
+                forcedImpostorFcs.Remove(fc);
+                forcedPreGameRoleFcs[fc] = role;
+            }
+            else
+            {
+                forcedImpostors.Remove(pc.PlayerId);
+                forcedPreGameRoles[pc.PlayerId] = role;
+            }
+        }
+
+private static void ClearForcedRole(PlayerControl pc)
+        {
+            if (pc == null) return;
+            string fc = GetRoleForceKey(pc);
+            if (!string.IsNullOrEmpty(fc))
+            {
+                forcedImpostorFcs.Remove(fc);
+                forcedPreGameRoleFcs.Remove(fc);
+            }
+
+            forcedImpostors.Remove(pc.PlayerId);
+            forcedPreGameRoles.Remove(pc.PlayerId);
+        }
+
+private static bool IsForced(PlayerControl pc)
+        {
+            if (pc == null) return false;
+            return IsForcedImp(pc) || TryGetForcedRole(pc, out _);
+        }
+
+public static List<byte> GetForcedImpostorIdsByFc()
+        {
+            List<byte> result = new List<byte>();
+            try
+            {
+                if (PlayerControl.AllPlayerControls == null) return result;
+                foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+                {
+                    if (pc == null || pc.Data == null || pc.Data.Disconnected || pc.PlayerId >= 100) continue;
+                    if (IsForcedImp(pc) || (TryGetForcedRole(pc, out RoleTypes role) && IsImpostorTeamRole(role)))
+                    {
+                        if (!result.Contains(pc.PlayerId)) result.Add(pc.PlayerId);
+                    }
+                }
+            }
+            catch { }
+            return result;
         }
 
 private static int GetAutoTwoImpostorLobbyFingerprint(List<PlayerControl> activePlayers)
@@ -725,6 +850,8 @@ private static bool RollAutoTwoImpostors(bool forceNewRoll)
 
                 forcedPreGameRoles.Clear();
                 forcedImpostors.Clear();
+                forcedPreGameRoleFcs.Clear();
+                forcedImpostorFcs.Clear();
                 autoTwoImpostorPlayerIds.Clear();
                 autoTwoImpostorsLastLobbyFingerprint = fingerprint;
 
@@ -745,7 +872,7 @@ private static bool RollAutoTwoImpostors(bool forceNewRoll)
                 for (int i = 0; i < 2; i++)
                 {
                     byte playerId = activePlayers[i].PlayerId;
-                    forcedImpostors.Add(playerId);
+                    SetForcedImp(activePlayers[i]);
                     autoTwoImpostorPlayerIds.Add(playerId);
                 }
 
@@ -836,7 +963,7 @@ private void DrawPlayersRoles()
                     autoTwoImpostorsLastLobbyFingerprint = 0;
                 }
             }
-            if (GUILayout.Button("Clear All Roles", btnStyle, GUILayout.Width(110), GUILayout.Height(25))) { autoTwoImpostors = false; autoTwoImpostorPlayerIds.Clear(); autoTwoImpostorsLastLobbyFingerprint = 0; forcedPreGameRoles.Clear(); forcedImpostors.Clear(); }
+            if (GUILayout.Button("Clear All Roles", btnStyle, GUILayout.Width(110), GUILayout.Height(25))) { autoTwoImpostors = false; autoTwoImpostorPlayerIds.Clear(); autoTwoImpostorsLastLobbyFingerprint = 0; forcedPreGameRoles.Clear(); forcedImpostors.Clear(); forcedPreGameRoleFcs.Clear(); forcedImpostorFcs.Clear(); }
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
@@ -900,11 +1027,12 @@ private void DrawPlayersRoles()
             {
                 if (pc == null || pc.Data == null || pc.PlayerId >= 100) continue;
                 string pName = pc.Data.PlayerName ?? "Unknown";
-                if (forcedPreGameRoles.ContainsKey(pc.PlayerId)) { string rShort = forcedPreGameRoles[pc.PlayerId].ToString().Replace("9", "Pha").Replace("10", "Tra").Replace("8", "Noi").Replace("12", "Det").Replace("18", "Vip"); if (rShort.Length > 3) rShort = rShort.Substring(0, 3); pName += $" [{rShort}]"; }
-                else if (forcedImpostors.Contains(pc.PlayerId)) pName += " [Imp]";
-                bool isSelected = selectedPreRoleId == pc.PlayerId;
+                string fc = GetRoleForceKey(pc);
+                if (TryGetForcedRole(pc, out RoleTypes rowRole)) { string rShort = rowRole.ToString().Replace("9", "Pha").Replace("10", "Tra").Replace("8", "Noi").Replace("12", "Det").Replace("18", "Vip"); if (rShort.Length > 3) rShort = rShort.Substring(0, 3); pName += $" [{rShort}]"; }
+                else if (IsForcedImp(pc)) pName += " [Imp]";
+                bool isSelected = !string.IsNullOrEmpty(fc) ? selectedPreRoleFc == fc : selectedPreRoleId == pc.PlayerId;
                 try { GUI.contentColor = Palette.PlayerColors[pc.Data.DefaultOutfit.ColorId]; } catch { }
-                if (GUILayout.Button(pName, isSelected ? activeTabStyle : btnStyle, GUILayout.Height(30))) selectedPreRoleId = pc.PlayerId;
+                if (GUILayout.Button(pName, isSelected ? activeTabStyle : btnStyle, GUILayout.Height(30))) { selectedPreRoleId = pc.PlayerId; selectedPreRoleFc = fc; }
                 GUI.contentColor = Color.white;
             }
             GUILayout.EndScrollView();
@@ -913,40 +1041,44 @@ private void DrawPlayersRoles()
             GUILayout.Space(8);
             GUILayout.BeginVertical(menuCardStyle, GUILayout.ExpandWidth(true), GUILayout.Height(315));
             preRolesActionScrollPos = GUILayout.BeginScrollView(preRolesActionScrollPos, GUILayout.ExpandHeight(true));
-            PlayerControl target = lockedPlayersList.FirstOrDefault(p => p.PlayerId == selectedPreRoleId);
+            PlayerControl target = !string.IsNullOrEmpty(selectedPreRoleFc)
+                ? lockedPlayersList.FirstOrDefault(p => GetRoleForceKey(p) == selectedPreRoleFc)
+                : lockedPlayersList.FirstOrDefault(p => p.PlayerId == selectedPreRoleId);
             if (target != null && target.Data != null)
             {
                 GUIStyle infoStyle = new GUIStyle(GUI.skin.label) { richText = true, fontSize = 14 };
                 GUILayout.Label($"<color=#aaaaaa>Selecting role for:</color> {target.Data.PlayerName}", infoStyle);
-                RoleTypes currentForced = forcedPreGameRoles.ContainsKey(target.PlayerId) ? forcedPreGameRoles[target.PlayerId] : RoleTypes.Crewmate;
-                bool isForced = forcedPreGameRoles.ContainsKey(target.PlayerId) || forcedImpostors.Contains(target.PlayerId);
+                RoleTypes currentForced = TryGetForcedRole(target, out RoleTypes targetRole) ? targetRole : RoleTypes.Crewmate;
+                bool isForced = IsForced(target);
                 string roleNameStr = currentForced.ToString().Replace("9", "Phantom").Replace("10", "Tracker").Replace("8", "Noisemaker").Replace("12", "Detective").Replace("18", "Viper");
-                if (forcedImpostors.Contains(target.PlayerId)) roleNameStr = "Impostor";
+                if (IsForcedImp(target)) roleNameStr = "Impostor";
+                string targetFc = GetRoleForceKey(target);
                 GUILayout.Label($"<color=#aaaaaa>Status:</color> {(isForced ? $"<color=#00FF00>Forced ({roleNameStr})</color>" : "<color=#FF0000>Not Forced (Random)</color>")}", infoStyle);
+                GUILayout.Label($"<color=#aaaaaa>FC:</color> {(string.IsNullOrEmpty(targetFc) ? "none, fallback PlayerId" : targetFc)}", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 11 });
                 GUILayout.Space(15);
                 DrawMenuSectionHeader("IMPOSTOR ROLES (Red Team)");
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Impostor", btnStyle, GUILayout.Height(24))) { forcedPreGameRoles.Remove(target.PlayerId); forcedImpostors.Add(target.PlayerId); }
-                if (GUILayout.Button("Shapeshifter", btnStyle, GUILayout.Height(24))) { forcedImpostors.Remove(target.PlayerId); forcedPreGameRoles[target.PlayerId] = RoleTypes.Shapeshifter; }
-                if (GUILayout.Button("Phantom", btnStyle, GUILayout.Height(24))) { forcedImpostors.Remove(target.PlayerId); forcedPreGameRoles[target.PlayerId] = (RoleTypes)9; }
-                if (GUILayout.Button("Viper", btnStyle, GUILayout.Height(24))) { forcedImpostors.Remove(target.PlayerId); forcedPreGameRoles[target.PlayerId] = (RoleTypes)18; }
+                if (GUILayout.Button("Impostor", btnStyle, GUILayout.Height(24))) SetForcedImp(target);
+                if (GUILayout.Button("Shapeshifter", btnStyle, GUILayout.Height(24))) SetForcedRole(target, RoleTypes.Shapeshifter);
+                if (GUILayout.Button("Phantom", btnStyle, GUILayout.Height(24))) SetForcedRole(target, (RoleTypes)9);
+                if (GUILayout.Button("Viper", btnStyle, GUILayout.Height(24))) SetForcedRole(target, (RoleTypes)18);
                 GUILayout.EndHorizontal();
                 GUILayout.Space(10);
                 DrawMenuSectionHeader("CREWMATE ROLES (Blue Team)");
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Crewmate", btnStyle, GUILayout.Height(24))) { forcedImpostors.Remove(target.PlayerId); forcedPreGameRoles[target.PlayerId] = RoleTypes.Crewmate; }
-                if (GUILayout.Button("Engineer", btnStyle, GUILayout.Height(24))) { forcedImpostors.Remove(target.PlayerId); forcedPreGameRoles[target.PlayerId] = RoleTypes.Engineer; }
-                if (GUILayout.Button("Scientist", btnStyle, GUILayout.Height(24))) { forcedImpostors.Remove(target.PlayerId); forcedPreGameRoles[target.PlayerId] = RoleTypes.Scientist; }
-                if (GUILayout.Button("Tracker", btnStyle, GUILayout.Height(24))) { forcedImpostors.Remove(target.PlayerId); forcedPreGameRoles[target.PlayerId] = (RoleTypes)10; }
+                if (GUILayout.Button("Crewmate", btnStyle, GUILayout.Height(24))) SetForcedRole(target, RoleTypes.Crewmate);
+                if (GUILayout.Button("Engineer", btnStyle, GUILayout.Height(24))) SetForcedRole(target, RoleTypes.Engineer);
+                if (GUILayout.Button("Scientist", btnStyle, GUILayout.Height(24))) SetForcedRole(target, RoleTypes.Scientist);
+                if (GUILayout.Button("Tracker", btnStyle, GUILayout.Height(24))) SetForcedRole(target, (RoleTypes)10);
                 GUILayout.EndHorizontal();
                 GUILayout.Space(5);
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Noisemaker", btnStyle, GUILayout.Height(24))) { forcedImpostors.Remove(target.PlayerId); forcedPreGameRoles[target.PlayerId] = (RoleTypes)8; }
-                if (GUILayout.Button("Guardian Angel", btnStyle, GUILayout.Height(24))) { forcedImpostors.Remove(target.PlayerId); forcedPreGameRoles[target.PlayerId] = RoleTypes.GuardianAngel; }
-                if (GUILayout.Button("Detective", btnStyle, GUILayout.Height(24))) { forcedImpostors.Remove(target.PlayerId); forcedPreGameRoles[target.PlayerId] = (RoleTypes)12; }
+                if (GUILayout.Button("Noisemaker", btnStyle, GUILayout.Height(24))) SetForcedRole(target, (RoleTypes)8);
+                if (GUILayout.Button("Guardian Angel", btnStyle, GUILayout.Height(24))) SetForcedRole(target, RoleTypes.GuardianAngel);
+                if (GUILayout.Button("Detective", btnStyle, GUILayout.Height(24))) SetForcedRole(target, (RoleTypes)12);
                 GUILayout.EndHorizontal();
                 GUILayout.Space(15);
-                if (GUILayout.Button("REMOVE FORCED ROLE", activeTabStyle, GUILayout.Height(35))) { forcedPreGameRoles.Remove(target.PlayerId); forcedImpostors.Remove(target.PlayerId); }
+                if (GUILayout.Button("REMOVE FORCED ROLE", activeTabStyle, GUILayout.Height(35))) ClearForcedRole(target);
                 GUILayout.Space(20);
                 GUILayout.Label("<color=#777777><b>Hide & Seek Notice:</b>\nВыбор Impostor/Shapeshifter/Phantom/Viper расширит лимит маньяков (Seekers) в Прятках!</color>", new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true });
             }
@@ -1269,6 +1401,31 @@ private static string FilterFpsLimitInput(string input)
             return sb.ToString();
         }
 
+private static string FilterMinuteInput(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+
+            StringBuilder sb = new StringBuilder(2);
+            for (int i = 0; i < input.Length && sb.Length < 2; i++)
+            {
+                char c = input[i];
+                if (c >= '0' && c <= '9') sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+private void ApplyBugRoomTimedAutoRunInput()
+        {
+            int min;
+            if (!int.TryParse(bugRoomTimedAutoRunInput, out min))
+                min = bugRoomTimedAutoRunMinutes;
+
+            bugRoomTimedAutoRunMinutes = Mathf.Clamp(min, 1, 60);
+            bugRoomTimedAutoRunInput = bugRoomTimedAutoRunMinutes.ToString();
+            isEditingBugRoomTimedAutoRun = false;
+            settingsDirty = true;
+        }
+
 private void ApplyFpsLimitInput()
         {
             int val;
@@ -1308,6 +1465,12 @@ private void ResetSlidersToDefault()
             fpsLimit = 60;
             fpsLimitInput = "60";
             isEditingFpsLimit = false;
+            bugRoomTimedAutoRun = false;
+            bugRoomTimedAutoRunMinutes = 10;
+            bugRoomTimedAutoRunInput = "10";
+            isEditingBugRoomTimedAutoRun = false;
+            bugRoomLv35Rehost = false;
+            bugRoomHostPassRejoin = false;
             limitFps = true;
             detailedLogsEnabled = false;
             throttleDefaultLogs = true;

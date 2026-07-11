@@ -43,7 +43,7 @@ namespace ElysiumModMenu
     [BepInPlugin("com.elysiummodmenu.menu", "ElysiumModMenu", Plugin.PluginVersion)]
     public class Plugin : BasePlugin
     {
-        public const string PluginVersion = "1.4.1";
+        public const string PluginVersion = "1.4.2";
         public static ModPlayer modClass;
 
         public static Plugin Instance { get; private set; } = null!;

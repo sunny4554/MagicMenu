@@ -178,6 +178,12 @@ private void LoadConfig()
                 hostAutoKillTargetId = (byte)Mathf.Clamp(LoadInt("M_HostAutoKillTargetId", hostAutoKillTargetId), 0, 255);
                 bugRoomAutoAngel = LoadBool("M_BugRoomAutoAngel", bugRoomAutoAngel);
                 bugRoomAutoKillShield = LoadBool("M_BugRoomAutoKillShield", bugRoomAutoKillShield);
+                bugRoomTimedAutoRun = LoadBool("M_BugRoomTimedAutoRun", bugRoomTimedAutoRun);
+                if (PlayerPrefs.HasKey("M_BugRoomTimedAutoRunMinutes"))
+                    bugRoomTimedAutoRunMinutes = Mathf.Clamp(PlayerPrefs.GetInt("M_BugRoomTimedAutoRunMinutes", bugRoomTimedAutoRunMinutes), 1, 60);
+                bugRoomTimedAutoRunInput = bugRoomTimedAutoRunMinutes.ToString();
+                bugRoomLv35Rehost = LoadBool("M_BugRoomLv35Rehost", bugRoomLv35Rehost);
+                bugRoomHostPassRejoin = LoadBool("M_BugRoomHostPassRejoin", bugRoomHostPassRejoin);
                 killWhileVanishedHostOnly = LoadBool("M_KillWhileVanishedHostOnly", killWhileVanishedHostOnly);
                 disableEndGameSafeMode = LoadBool("M_DisableEndGameSafeMode", disableEndGameSafeMode);
                 disableMapSafeMode = LoadBool("M_DisableMapSafeMode", disableMapSafeMode);

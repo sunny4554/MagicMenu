@@ -137,6 +137,18 @@ public static bool allowDuplicateColors = false;
 
 public static bool autoGhostAfterStart = false;
 
+public static bool bugRoomTimedAutoRun = false;
+
+public static int bugRoomTimedAutoRunMinutes = 10;
+
+public static string bugRoomTimedAutoRunInput = "10";
+
+public static bool isEditingBugRoomTimedAutoRun = false;
+
+public static bool bugRoomLv35Rehost = false;
+
+public static bool bugRoomHostPassRejoin = false;
+
 public static bool autoBanPlatformSpoof = false;
 
 public static bool banCustomPlatformsFromTxt = false;
@@ -741,6 +753,10 @@ public static void TickNotificationQueue()
 
 public static Dictionary<byte, RoleTypes> forcedPreGameRoles = new Dictionary<byte, RoleTypes>();
 
+public static HashSet<string> forcedImpostorFcs = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+
+public static Dictionary<string, RoleTypes> forcedPreGameRoleFcs = new Dictionary<string, RoleTypes>(System.StringComparer.OrdinalIgnoreCase);
+
 public static bool enablePreGameRoleForce = false;
 
 public static bool autoTwoImpostors = false;
@@ -760,6 +776,8 @@ private Vector2 preRolesListScrollPos = Vector2.zero;
 private Vector2 preRolesActionScrollPos = Vector2.zero;
 
 private byte selectedPreRoleId = 255;
+
+private string selectedPreRoleFc = string.Empty;
 
 public static List<PlayerControl> lockedPlayersList = new List<PlayerControl>();
 

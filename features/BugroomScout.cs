@@ -538,4 +538,387 @@ namespace ElysiumModMenu
             catch { return null; }
         }
     }
+
+    public static class ElysiumBugroomFarmService
+    {
+        public sealed class BugroomFarmStatusSnapshot
+        {
+            public bool MainEnabled;
+            public bool PassEnabled;
+            public string MainState = string.Empty;
+            public string PassState = string.Empty;
+            public int Players;
+            public int Level;
+            public float TimerLeft;
+        }
+
+        private const float FarmDelay = 240f;
+        private const float PassDelay = 2f;
+        private const float RejoinDelay = 2f;
+        private const float JoinTimeout = 18f;
+        private const float PassCooldown = 8f;
+
+        private static string mainState = "Off";
+        private static string passState = "Off";
+        private static float mainAt = -1f;
+        private static float passAt = -1f;
+        private static float lastPassAt = -20f;
+        private static int mainCode;
+        private static int passCode;
+        private static bool mainRun;
+        private static bool mainSawGame;
+        private static bool mainLeaving;
+        private static bool mainJoining;
+        private static bool passLeaving;
+        private static bool passJoining;
+
+        public static void Tick()
+        {
+            TickMain();
+            TickPass();
+        }
+
+        public static BugroomFarmStatusSnapshot GetStatusSnapshot()
+        {
+            return new BugroomFarmStatusSnapshot
+            {
+                MainEnabled = ElysiumModMenuGUI.bugRoomLv35Rehost,
+                PassEnabled = ElysiumModMenuGUI.bugRoomHostPassRejoin,
+                MainState = mainState ?? string.Empty,
+                PassState = passState ?? string.Empty,
+                Players = CountPlayers(),
+                Level = GetLocalLevel(),
+                TimerLeft = mainAt > 0f && !mainRun && !mainLeaving && !mainJoining ? Mathf.Max(0f, mainAt - Time.unscaledTime) : 0f,
+            };
+        }
+
+        public static void ResetMain()
+        {
+            mainAt = -1f;
+            mainCode = 0;
+            mainRun = false;
+            mainSawGame = false;
+            mainLeaving = false;
+            mainJoining = false;
+            mainState = ElysiumModMenuGUI.bugRoomLv35Rehost ? "Idle" : "Off";
+        }
+
+        public static void ResetPass()
+        {
+            passAt = -1f;
+            passCode = 0;
+            passLeaving = false;
+            passJoining = false;
+            passState = ElysiumModMenuGUI.bugRoomHostPassRejoin ? "Waiting host" : "Off";
+        }
+
+        private static void TickMain()
+        {
+            if (!ElysiumModMenuGUI.bugRoomLv35Rehost)
+            {
+                ResetMain();
+                return;
+            }
+
+            float now = Time.unscaledTime;
+            InnerNetClient client = TryGetClient();
+
+            if (mainLeaving)
+            {
+                if (InRoom()) return;
+                if (now < mainAt) return;
+
+                Rejoin(mainCode);
+                mainAt = now + JoinTimeout;
+                mainLeaving = false;
+                mainJoining = true;
+                mainState = "Rejoining";
+                return;
+            }
+
+            if (mainJoining)
+            {
+                if (InRoom())
+                {
+                    mainJoining = false;
+                    mainRun = false;
+                    mainSawGame = false;
+                    mainAt = -1f;
+                    ElysiumModMenuGUI.AutoHostAutoRunEnabled = false;
+                    mainState = "Back, waiting host";
+                    return;
+                }
+
+                if (now >= mainAt)
+                {
+                    GUIUtility.systemCopyBuffer = mainCode != 0 ? GameCode.IntToGameName(mainCode) : GUIUtility.systemCopyBuffer;
+                    ElysiumModMenuGUI.bugRoomLv35Rehost = false;
+                    ElysiumModMenuGUI.settingsDirty = true;
+                    ResetMain();
+                    ElysiumModMenuGUI.ShowNotification("<color=#FF4444>[BUG ROOM]</color> Main rejoin failed, code copied.");
+                }
+                return;
+            }
+
+            if (client == null || !InRoom())
+            {
+                mainAt = -1f;
+                mainState = "Waiting room";
+                return;
+            }
+
+            int cnt = CountPlayers();
+            int lvl = GetLocalLevel();
+
+            if (mainRun && mainSawGame && LobbyBehaviour.Instance != null)
+            {
+                ElysiumModMenuGUI.AutoHostAutoRunEnabled = false;
+                ElysiumModMenuGUI.settingsDirty = true;
+
+                if (lvl >= 35)
+                {
+                    if (cnt < 2)
+                    {
+                        mainState = $"Lv35 wait players {cnt}/2";
+                        return;
+                    }
+
+                    mainCode = client.GameId;
+                    Leave();
+                    mainAt = now + RejoinDelay;
+                    mainLeaving = true;
+                    mainState = "Lv35 rejoin";
+                    ElysiumModMenuGUI.ShowNotification("<color=#FF00FF>[BUG ROOM]</color> Lv35 reached, rejoining room.");
+                    return;
+                }
+
+                mainRun = false;
+                mainSawGame = false;
+                mainAt = now + FarmDelay;
+                mainState = "Next 4m timer";
+                return;
+            }
+
+            if (ShipStatus.Instance != null && LobbyBehaviour.Instance == null)
+            {
+                if (mainRun) mainSawGame = true;
+                mainState = mainRun ? "Auto win running" : "In game";
+                return;
+            }
+
+            if (!client.AmHost)
+            {
+                mainAt = -1f;
+                mainState = "Waiting host";
+                return;
+            }
+
+            if (cnt < 2)
+            {
+                mainAt = -1f;
+                mainState = $"Players {cnt}/2";
+                return;
+            }
+
+            if (mainRun)
+            {
+                mainState = "Waiting result";
+                return;
+            }
+
+            if (mainAt < 0f)
+            {
+                mainAt = now + FarmDelay;
+                ElysiumModMenuGUI.AutoHostAutoRunEnabled = false;
+                ElysiumModMenuGUI.settingsDirty = true;
+                mainState = "Timer 4m";
+                return;
+            }
+
+            if (now < mainAt)
+            {
+                mainState = "Timer 4m";
+                return;
+            }
+
+            if (ElysiumModMenuGUI.AutoHostMinPlayers > 2)
+                ElysiumModMenuGUI.AutoHostMinPlayers = 2;
+            ElysiumModMenuGUI.AutoReturnLobbyAfterMatch = true;
+            ElysiumModMenuGUI.AutoHostAutoRunEnabled = true;
+            ElysiumModMenuGUI.settingsDirty = true;
+            mainRun = true;
+            mainSawGame = false;
+            mainState = "Auto Run ON";
+            ElysiumModMenuGUI.ShowNotification("<color=#FF00FF>[BUG ROOM]</color> Auto Run enabled after 4m.");
+        }
+
+        private static void TickPass()
+        {
+            if (!ElysiumModMenuGUI.bugRoomHostPassRejoin)
+            {
+                ResetPass();
+                return;
+            }
+
+            float now = Time.unscaledTime;
+            InnerNetClient client = TryGetClient();
+
+            if (passLeaving)
+            {
+                if (InRoom()) return;
+                if (now < passAt) return;
+
+                Rejoin(passCode);
+                passAt = now + JoinTimeout;
+                passLeaving = false;
+                passJoining = true;
+                passState = "Rejoining";
+                return;
+            }
+
+            if (passJoining)
+            {
+                if (InRoom())
+                {
+                    passJoining = false;
+                    passAt = -1f;
+                    lastPassAt = now;
+                    passState = "Back";
+                    return;
+                }
+
+                if (now >= passAt)
+                {
+                    GUIUtility.systemCopyBuffer = passCode != 0 ? GameCode.IntToGameName(passCode) : GUIUtility.systemCopyBuffer;
+                    ResetPass();
+                    ElysiumModMenuGUI.ShowNotification("<color=#FF4444>[BUG ROOM]</color> Pass rejoin failed, code copied.");
+                }
+                return;
+            }
+
+            if (client == null || LobbyBehaviour.Instance == null)
+            {
+                passAt = -1f;
+                passState = "Waiting lobby";
+                return;
+            }
+
+            if (!client.AmHost)
+            {
+                passAt = -1f;
+                passState = "Waiting";
+                return;
+            }
+
+            int cnt = CountPlayers();
+            if (cnt < 2)
+            {
+                passAt = -1f;
+                passState = $"Host, players {cnt}/2";
+                return;
+            }
+
+            if (now - lastPassAt < PassCooldown)
+            {
+                passState = "Cooldown";
+                return;
+            }
+
+            if (passAt < 0f)
+            {
+                passAt = now + PassDelay;
+                passState = "Pass in 2s";
+                return;
+            }
+
+            if (now < passAt)
+            {
+                passState = "Pass in 2s";
+                return;
+            }
+
+            passCode = client.GameId;
+            Leave();
+            passAt = now + RejoinDelay;
+            passLeaving = true;
+            passState = "Leaving";
+            ElysiumModMenuGUI.ShowNotification("<color=#FF00FF>[BUG ROOM]</color> Host pass rejoin.");
+        }
+
+        private static int CountPlayers()
+        {
+            int n = 0;
+            try
+            {
+                if (AmongUsClient.Instance != null && AmongUsClient.Instance.allClients != null)
+                {
+                    var c = AmongUsClient.Instance.allClients.GetEnumerator();
+                    while (c.MoveNext())
+                    {
+                        ClientData cd = c.Current;
+                        if (cd == null || cd.Id < 0) continue;
+                        if (cd.Character != null && cd.Character.Data != null && cd.Character.Data.Disconnected) continue;
+                        n++;
+                    }
+                    if (n > 0) return n;
+                }
+            }
+            catch { }
+
+            try
+            {
+                if (PlayerControl.AllPlayerControls == null) return 0;
+                foreach (PlayerControl pc in PlayerControl.AllPlayerControls)
+                    if (pc != null && pc.Data != null && !pc.Data.Disconnected && pc.PlayerId < 100)
+                        n++;
+            }
+            catch { }
+            return n;
+        }
+
+        private static int GetLocalLevel()
+        {
+            try
+            {
+                PlayerControl pc = PlayerControl.LocalPlayer;
+                if (pc != null && pc.Data != null)
+                {
+                    uint raw = pc.Data.PlayerLevel;
+                    if (raw != uint.MaxValue && raw < 10000) return (int)raw + 1;
+                }
+            }
+            catch { }
+            return 0;
+        }
+
+        private static void Rejoin(int code)
+        {
+            try
+            {
+                AmongUsClient au = AmongUsClient.Instance;
+                if (au == null || code == 0) return;
+                au.GameId = code;
+                var co = au.CoJoinOnlineGameFromCode(code);
+                if (co != null) au.StartCoroutine(co);
+            }
+            catch { }
+        }
+
+        private static void Leave()
+        {
+            try { if (AmongUsClient.Instance != null) AmongUsClient.Instance.ExitGame(DisconnectReasons.ExitGame); }
+            catch { }
+        }
+
+        private static bool InRoom()
+        {
+            return LobbyBehaviour.Instance != null || ShipStatus.Instance != null;
+        }
+
+        private static InnerNetClient TryGetClient()
+        {
+            try { return AmongUsClient.Instance == null ? null : (InnerNetClient)AmongUsClient.Instance; }
+            catch { return null; }
+        }
+    }
 }

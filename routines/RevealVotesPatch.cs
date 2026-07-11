@@ -105,7 +105,10 @@ public static class RevealVotesPatch
         if (votedForId == PlayerVoteArea.SkippedVote)
         {
             if (meeting.SkippedVoting != null)
+            {
                 meeting.BloopAVoteIcon(voter, 0, meeting.SkippedVoting.transform);
+                PaintVoteIcon(meeting.SkippedVoting.transform, voter);
+            }
             return;
         }
 
@@ -113,8 +116,31 @@ public static class RevealVotesPatch
         {
             if (state == null || state.TargetPlayerId != votedForId) continue;
             meeting.BloopAVoteIcon(voter, 0, state.transform);
+            PaintVoteIcon(state.transform, voter);
             break;
         }
+    }
+
+    private static void PaintVoteIcon(Transform tr, NetworkedPlayerInfo voter)
+    {
+        try
+        {
+            if (tr == null || voter == null || voter.DefaultOutfit == null) return;
+            int colorId = voter.DefaultOutfit.ColorId;
+            if (colorId < 0 || colorId >= Palette.PlayerColors.Length) return;
+
+            var spread = tr.GetComponent<VoteSpreader>();
+            if (spread != null && spread.Votes != null && spread.Votes.Count != 0)
+            {
+                var spr = spread.Votes[spread.Votes.Count - 1];
+                if (spr != null)
+                {
+                    PlayerMaterial.SetColors(colorId, spr);
+                    spr.color = Color.white;
+                }
+            }
+        }
+        catch { }
     }
 
     internal static void ShowVoteSprites(MeetingHud meeting)

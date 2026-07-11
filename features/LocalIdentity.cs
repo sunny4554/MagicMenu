@@ -802,6 +802,10 @@ private void SaveConfig()
                 PlayerPrefs.SetInt("M_HostAutoKillTargetId", hostAutoKillTargetId);
                 SaveBool("M_BugRoomAutoAngel", bugRoomAutoAngel);
                 SaveBool("M_BugRoomAutoKillShield", bugRoomAutoKillShield);
+                SaveBool("M_BugRoomTimedAutoRun", bugRoomTimedAutoRun);
+                PlayerPrefs.SetInt("M_BugRoomTimedAutoRunMinutes", Mathf.Clamp(bugRoomTimedAutoRunMinutes, 1, 60));
+                SaveBool("M_BugRoomLv35Rehost", bugRoomLv35Rehost);
+                SaveBool("M_BugRoomHostPassRejoin", bugRoomHostPassRejoin);
                 SaveBool("M_KillWhileVanishedHostOnly", killWhileVanishedHostOnly);
                 SaveBool("M_DisableEndGameSafeMode", disableEndGameSafeMode);
                 SaveBool("M_DisableMapSafeMode", disableMapSafeMode);
@@ -928,6 +932,10 @@ private void DrawBugRoomTab()
             GUILayout.Space(5);
             AutoHostAutoRunEnabled = DrawToggle(AutoHostAutoRunEnabled, L("Auto Run 1.75s + Imp Win", "Авто-прогон 1.75с + победа предателей"), 280);
             GUILayout.Space(5);
+            DrawBugRoomTimedAutoRun();
+            GUILayout.Space(5);
+            DrawBugRoomFarmModes();
+            GUILayout.Space(8);
             hostAutoKillRandom = DrawToggle(hostAutoKillRandom, "Kill Random Target", 280);
             GUILayout.Space(5);
             hostAutoKillTarget = DrawToggle(hostAutoKillTarget, "Auto Kill Target", 280);
@@ -965,6 +973,85 @@ private void DrawBugRoomTab()
             GUILayout.Label($"Room: <color=#{GetMenuAccentHex()}>{code}</color> | suffix: <color=#{GetMenuAccentHex()}>{suffix}</color>", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 });
 
             GUILayout.EndVertical();
+        }
+
+private void DrawBugRoomFarmModes()
+        {
+            bool oldMain = bugRoomLv35Rehost;
+            bool oldPass = bugRoomHostPassRejoin;
+
+            int mode = bugRoomLv35Rehost ? 1 : (bugRoomHostPassRejoin ? 2 : 0);
+            GUILayout.BeginHorizontal(GUILayout.Width(345), GUILayout.Height(24));
+            GUILayout.Label("Farm acc:", new GUIStyle(toggleLabelStyle) { fontSize = 12 }, GUILayout.Width(72), GUILayout.Height(22));
+            int nextMode = Mathf.RoundToInt(GUILayout.HorizontalSlider(mode, 0f, 2f, sliderStyle, sliderThumbStyle, GUILayout.Width(150)));
+            string modeText = nextMode == 1 ? "1 acc / lvl35" : (nextMode == 2 ? "2 acc / pass host" : "OFF");
+            GUILayout.Label($"<color=#{GetMenuAccentHex()}>{modeText}</color>", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 }, GUILayout.Width(120), GUILayout.Height(22));
+            GUILayout.EndHorizontal();
+
+            if (nextMode != mode)
+            {
+                bugRoomLv35Rehost = nextMode == 1;
+                bugRoomHostPassRejoin = nextMode == 2;
+            }
+
+            if (oldMain != bugRoomLv35Rehost)
+            {
+                settingsDirty = true;
+                ElysiumBugroomFarmService.ResetMain();
+            }
+            if (oldPass != bugRoomHostPassRejoin)
+            {
+                settingsDirty = true;
+                ElysiumBugroomFarmService.ResetPass();
+            }
+
+            var farm = ElysiumBugroomFarmService.GetStatusSnapshot();
+            string time = farm.TimerLeft > 0f ? $"{Mathf.FloorToInt(farm.TimerLeft / 60f):00}:{Mathf.FloorToInt(farm.TimerLeft % 60f):00}" : "--:--";
+            GUILayout.Label($"Main: <color=#{GetMenuAccentHex()}>{farm.MainState}</color> | lvl {farm.Level} | timer {time}",
+                new GUIStyle(GUI.skin.label) { richText = true, fontSize = 11 });
+            GUILayout.Label($"Pass: <color=#{GetMenuAccentHex()}>{farm.PassState}</color> | players {farm.Players}/2",
+                new GUIStyle(GUI.skin.label) { richText = true, fontSize = 11 });
+        }
+
+private void DrawBugRoomTimedAutoRun()
+        {
+            GUILayout.BeginHorizontal(GUILayout.Width(330), GUILayout.Height(24));
+            bugRoomTimedAutoRun = DrawToggle(bugRoomTimedAutoRun, "Timed Auto Run", 150);
+            GUILayout.Space(8);
+
+            if (!isEditingBugRoomTimedAutoRun) bugRoomTimedAutoRunInput = bugRoomTimedAutoRunMinutes.ToString();
+            if (DrawBugRoomMinuteInput())
+            {
+                isEditingBugRoomTimedAutoRun = true;
+                bugRoomTimedAutoRunInput = string.Empty;
+            }
+            GUILayout.Label("min", new GUIStyle(toggleLabelStyle) { fontSize = 12 }, GUILayout.Width(32), GUILayout.Height(22));
+            GUILayout.EndHorizontal();
+
+            GUILayout.Label(GetBugRoomTimedAutoRunText(), new GUIStyle(GUI.skin.label) { richText = true, fontSize = 11 });
+        }
+
+private bool DrawBugRoomMinuteInput()
+        {
+            GUIStyle style = new GUIStyle(isEditingBugRoomTimedAutoRun ? activeTabStyle : inputBlockStyle);
+            style.alignment = TextAnchor.MiddleCenter;
+            style.clipping = TextClipping.Clip;
+            style.wordWrap = false;
+            style.padding = CreateRectOffset(4, 4, 0, 0);
+
+            Rect rect = GUILayoutUtility.GetRect(45f, 22f, GUILayout.Width(45f), GUILayout.Height(22f));
+            string text = string.IsNullOrEmpty(bugRoomTimedAutoRunInput) ? (isEditingBugRoomTimedAutoRun ? "|" : bugRoomTimedAutoRunMinutes.ToString()) : bugRoomTimedAutoRunInput;
+            return GUI.Button(rect, text, style);
+        }
+
+private string GetBugRoomTimedAutoRunText()
+        {
+            if (!bugRoomTimedAutoRun) return "<color=#777777>Timer off</color>";
+            if (AutoHostAutoRunEnabled) return "<color=#66FF99>Auto Run already ON</color>";
+            if (!IsBugRoomTimedAutoRunInGame()) return "<color=#aaaaaa>Waiting game</color>";
+
+            float left = Mathf.Max(0f, bugRoomTimedAutoRunMinutes * 60f - bugRoomTimedAutoRunTimer);
+            return $"<color=#{GetMenuAccentHex()}>Timer:</color> {Mathf.FloorToInt(left / 60f):00}:{Mathf.FloorToInt(left % 60f):00}";
         }
 
 private void DrawBugRoomKillTargetPicker()

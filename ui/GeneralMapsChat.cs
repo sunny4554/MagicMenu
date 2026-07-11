@@ -1635,6 +1635,53 @@ private void TryBugRoomAutoKillShieldTick()
             catch { }
         }
 
+private void TryBugRoomTimedAutoRunTick()
+        {
+            if (!bugRoomTimedAutoRun)
+            {
+                bugRoomTimedAutoRunTimer = 0f;
+                bugRoomTimedAutoRunDone = false;
+                return;
+            }
+
+            if (AutoHostAutoRunEnabled)
+            {
+                bugRoomTimedAutoRunTimer = 0f;
+                bugRoomTimedAutoRunDone = true;
+                return;
+            }
+
+            if (!IsBugRoomTimedAutoRunInGame())
+            {
+                bugRoomTimedAutoRunTimer = 0f;
+                bugRoomTimedAutoRunDone = false;
+                return;
+            }
+
+            if (bugRoomTimedAutoRunDone) return;
+
+            bugRoomTimedAutoRunTimer += Time.deltaTime;
+            if (bugRoomTimedAutoRunTimer < Mathf.Clamp(bugRoomTimedAutoRunMinutes, 1, 60) * 60f) return;
+
+            AutoHostAutoRunEnabled = true;
+            bugRoomTimedAutoRunDone = true;
+            bugRoomTimedAutoRunTimer = 0f;
+            settingsDirty = true;
+            ShowNotification("<color=#FF00FF>[BUG ROOM]</color> Auto Run 1.75 enabled.");
+        }
+
+private static bool IsBugRoomTimedAutoRunInGame()
+        {
+            try
+            {
+                if (AmongUsClient.Instance == null || AmongUsClient.Instance.GameState != InnerNetClient.GameStates.Started) return false;
+                if (ShipStatus.Instance == null || LobbyBehaviour.Instance != null) return false;
+                if (UnityEngine.Object.FindObjectOfType<EndGameManager>() != null) return false;
+                return true;
+            }
+            catch { return false; }
+        }
+
 private static bool CanRunBugRoomNonHostTick()
         {
             try

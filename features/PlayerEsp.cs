@@ -58,7 +58,7 @@ namespace ElysiumModMenu
                     var impRoleTypes = new HashSet<int> { 1, 5, 9, 18 };
                     List<PlayerControl> impostors = new List<PlayerControl>();
                     foreach (var p in allPlayers)
-                        if (ElysiumModMenuGUI.forcedImpostors.Contains(p.PlayerId) || (ElysiumModMenuGUI.forcedPreGameRoles.ContainsKey(p.PlayerId) && impRoleTypes.Contains((int)ElysiumModMenuGUI.forcedPreGameRoles[p.PlayerId])))
+                        if (ElysiumModMenuGUI.IsForcedImp(p) || (ElysiumModMenuGUI.TryGetForcedRole(p, out RoleTypes forcedRole) && impRoleTypes.Contains((int)forcedRole)))
                             impostors.Add(p);
 
                     if (ElysiumModMenuGUI.IsHideAndSeekMode() && ElysiumModMenuGUI.TryGetForcedHideAndSeekSeekerId(out byte seekerId))
@@ -88,12 +88,11 @@ namespace ElysiumModMenu
                     IGameOptions opts = GameOptionsManager.Instance.CurrentGameOptions;
                     GameManager.Instance.LogicRoleSelection.AssignRolesForTeam(impData, opts, (RoleTeamTypes)1, int.MaxValue, new Il2CppSystem.Nullable<RoleTypes>());
                     GameManager.Instance.LogicRoleSelection.AssignRolesForTeam(crewData, opts, (RoleTeamTypes)0, int.MaxValue, new Il2CppSystem.Nullable<RoleTypes>((RoleTypes)0));
-                    foreach (var kvp in ElysiumModMenuGUI.forcedPreGameRoles)
+                    foreach (var pc in allPlayers)
                     {
-                        if (kvp.Value != RoleTypes.Crewmate && kvp.Value != RoleTypes.Impostor)
+                        if (ElysiumModMenuGUI.TryGetForcedRole(pc, out RoleTypes role) && role != RoleTypes.Crewmate && role != RoleTypes.Impostor)
                         {
-                            var pc = allPlayers.FirstOrDefault(p => p.PlayerId == kvp.Key);
-                            if (pc != null) RoleManager.Instance.SetRole(pc, kvp.Value);
+                            RoleManager.Instance.SetRole(pc, role);
                         }
                     }
                     foreach (var pc in allPlayers) if (pc.Data.Role != null) pc.Data.Role.Initialize(pc);
@@ -322,18 +321,31 @@ namespace ElysiumModMenu
         {
             public static void Postfix(ChatBubble __instance)
             {
-                if (!ElysiumModMenuGUI.showPlayerInfo || __instance.playerInfo == null) return;
-                if (ElysiumModMenuGUI.IsMeetingVoteUiActive()) return;
+                AddInfo(__instance);
+            }
+
+            internal static void AddInfo(ChatBubble bubble)
+            {
+                if (!ElysiumModMenuGUI.showPlayerInfo || bubble == null || bubble.playerInfo == null || bubble.NameText == null) return;
                 try
                 {
                     string accentHex = ElysiumModMenuGUI.GetMenuAccentHex(false);
-                    string espLine = ElysiumModMenuGUI.BuildESPInfoLine(__instance.playerInfo, 9, false);
+                    string espLine = ElysiumModMenuGUI.BuildESPInfoLine(bubble.playerInfo, 9, false);
                     if (string.IsNullOrWhiteSpace(espLine)) return;
                     string extra = $" <color=#{accentHex}><size=80%>{espLine}</size></color>";
 
-                    if (!__instance.NameText.text.Contains("Lv:")) __instance.NameText.text += extra;
+                    if (!bubble.NameText.text.Contains("Lv:")) bubble.NameText.text += extra;
                 }
                 catch { }
+            }
+        }
+
+[HarmonyPatch(typeof(ChatBubble), nameof(ChatBubble.SetText))]
+        public static class ChatBubble_SetText_Patch
+        {
+            public static void Postfix(ChatBubble __instance)
+            {
+                ChatBubble_SetName_Patch.AddInfo(__instance);
             }
         }
 

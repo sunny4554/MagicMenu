@@ -541,6 +541,10 @@ private float bugRoomAngelTimer = 0f;
 
 private float bugRoomShieldKillTimer = 0f;
 
+private float bugRoomTimedAutoRunTimer = 0f;
+
+private bool bugRoomTimedAutoRunDone = false;
+
 public static bool enableColorCommand = false;
 
 public static bool hostChatColor = false;

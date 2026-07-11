@@ -151,8 +151,8 @@ private void DrawPlayersTab()
                     if (pc == null || pc.Data == null || pc.PlayerId >= 100) continue;
                     string pName = pc.Data.PlayerName ?? "Unknown";
 
-                    if (forcedPreGameRoles.ContainsKey(pc.PlayerId)) pName += " [*]";
-                    else if (forcedImpostors.Contains(pc.PlayerId)) pName += " [Imp]";
+                    if (TryGetForcedRole(pc, out _)) pName += " [*]";
+                    else if (IsForcedImp(pc)) pName += " [Imp]";
 
                     bool isSelected = selectedAntiCheatPlayerId == pc.PlayerId;
 
@@ -1165,8 +1165,8 @@ private static List<byte> GetForcedImpostorPlayerIds()
                     {
                         if (player == null || player.Data == null || player.Data.Disconnected) continue;
                         byte playerId = player.PlayerId;
-                        if (forcedImpostors.Contains(playerId) ||
-                            (forcedPreGameRoles.TryGetValue(playerId, out RoleTypes role) && IsImpostorTeamRole(role)))
+                        if (IsForcedImp(player) ||
+                            (TryGetForcedRole(player, out RoleTypes role) && IsImpostorTeamRole(role)))
                         {
                             if (!result.Contains(playerId))
                                 result.Add(playerId);
@@ -1175,14 +1175,6 @@ private static List<byte> GetForcedImpostorPlayerIds()
                 }
             }
             catch { }
-
-            foreach (byte playerId in forcedImpostors)
-                if (!result.Contains(playerId))
-                    result.Add(playerId);
-
-            foreach (var kvp in forcedPreGameRoles)
-                if (IsImpostorTeamRole(kvp.Value) && !result.Contains(kvp.Key))
-                    result.Add(kvp.Key);
 
             return result;
         }

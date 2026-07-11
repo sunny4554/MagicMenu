@@ -51,7 +51,7 @@ public void OnGUI()
 
             HandleMessage.HandleTimer();
 
-            bool isTyping = isEditingName || isEditingLevel || isEditingFriendCode || isEditingLocalFriendCode || isEditingGhostChatColor || isEditingBan || isEditingFpsLimit;
+            bool isTyping = isEditingName || isEditingLevel || isEditingFriendCode || isEditingLocalFriendCode || isEditingGhostChatColor || isEditingBan || isEditingFpsLimit || isEditingBugRoomTimedAutoRun;
             bool isCustomSpoofRpcEditing = customSpoofRpcInputFocused && selectedSpoofMenuIndex == spoofMenuNames.Length - 1;
             bool isBinding = isWaitingForBind || isWaitBindMassMorph || isWaitBindSpawnLobby || isWaitBindDespawnLobby ||
                   isWaitBindCloseMeeting || isWaitBindInstaStart || isWaitBindEndCrew || isWaitBindEndImp ||
@@ -70,7 +70,11 @@ public void OnGUI()
                     {
                         ApplyFpsLimitInput();
                     }
-                    isEditingName = isEditingLevel = isEditingFriendCode = isEditingLocalFriendCode = isEditingGhostChatColor = isEditingBan = false;
+                    if (isEditingBugRoomTimedAutoRun)
+                    {
+                        ApplyBugRoomTimedAutoRunInput();
+                    }
+                    isEditingName = isEditingLevel = isEditingFriendCode = isEditingLocalFriendCode = isEditingGhostChatColor = isEditingBan = isEditingBugRoomTimedAutoRun = false;
                     customSpoofRpcInputFocused = false;
                     ResetAllBindWaits();
                     e.Use();
@@ -141,6 +145,7 @@ public void OnGUI()
                     else if (isEditingLocalFriendCode && HandleClipboardShortcut(e, ref localFriendCodeInput)) { }
                     else if (isEditingGhostChatColor && HandleClipboardShortcut(e, ref ghostChatColorHex, 10)) { ghostChatColorHex = FilterGhostChatColorInput(ghostChatColorHex); }
                     else if (isEditingFpsLimit && HandleClipboardShortcut(e, ref fpsLimitInput, 3)) { fpsLimitInput = FilterFpsLimitInput(fpsLimitInput); }
+                    else if (isEditingBugRoomTimedAutoRun && HandleClipboardShortcut(e, ref bugRoomTimedAutoRunInput, 2)) { bugRoomTimedAutoRunInput = FilterMinuteInput(bugRoomTimedAutoRunInput); }
                     else if (e.keyCode == KeyCode.Backspace)
                     {
                         if (isEditingBan && banInput.Length > 0) { banInput = banInput.Substring(0, banInput.Length - 1); }
@@ -150,11 +155,17 @@ public void OnGUI()
                         if (isEditingLocalFriendCode && localFriendCodeInput.Length > 0) { localFriendCodeInput = localFriendCodeInput.Substring(0, localFriendCodeInput.Length - 1); }
                         if (isEditingGhostChatColor && ghostChatColorHex.Length > 0) { ghostChatColorHex = ghostChatColorHex.Substring(0, ghostChatColorHex.Length - 1); }
                         if (isEditingFpsLimit && fpsLimitInput.Length > 0) { fpsLimitInput = fpsLimitInput.Substring(0, fpsLimitInput.Length - 1); }
+                        if (isEditingBugRoomTimedAutoRun && bugRoomTimedAutoRunInput.Length > 0) { bugRoomTimedAutoRunInput = bugRoomTimedAutoRunInput.Substring(0, bugRoomTimedAutoRunInput.Length - 1); }
                         e.Use();
                     }
                     else if ((e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) && isEditingFpsLimit)
                     {
                         ApplyFpsLimitInput();
+                        e.Use();
+                    }
+                    else if ((e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) && isEditingBugRoomTimedAutoRun)
+                    {
+                        ApplyBugRoomTimedAutoRunInput();
                         e.Use();
                     }
                     else if (e.character != 0 && e.character != '\n' && e.character != '\r')
@@ -166,6 +177,7 @@ public void OnGUI()
                         if (isEditingLocalFriendCode) { localFriendCodeInput += e.character; }
                         if (isEditingGhostChatColor) { ghostChatColorHex = FilterGhostChatColorInput((ghostChatColorHex ?? "") + e.character); }
                         if (isEditingFpsLimit && e.character >= '0' && e.character <= '9') { fpsLimitInput = FilterFpsLimitInput((fpsLimitInput ?? "") + e.character); }
+                        if (isEditingBugRoomTimedAutoRun && e.character >= '0' && e.character <= '9') { bugRoomTimedAutoRunInput = FilterMinuteInput((bugRoomTimedAutoRunInput ?? "") + e.character); }
                         e.Use();
                     }
                 }

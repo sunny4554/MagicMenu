@@ -158,6 +158,7 @@ public void Update()
 
             ElysiumAutoHostService.Tick();
             ElysiumAutoLobbyReturn.UpdateLogic();
+            ElysiumBugroomFarmService.Tick();
             ElysiumBugroomScoutService.Tick();
             ApplyFpsLimit();
             TryAutoGhostAfterStartTick();
@@ -192,6 +193,7 @@ public void Update()
                 TryHostAutoKillTargetTick();
                 TryBugRoomAutoAngelTick();
                 TryBugRoomAutoKillShieldTick();
+                TryBugRoomTimedAutoRunTick();
                 TryAutoBanBrokenFriendCodeTick();
                 TryAutoKickLowLevelTick();
 

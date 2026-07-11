@@ -895,10 +895,16 @@ public static void InitializeKillCooldownOnRoundStart()
             {
                 if (AmongUsClient.Instance != null && AmongUsClient.Instance.AmHost && ElysiumModMenuGUI.enablePreGameRoleForce)
                 {
-                    foreach (var kvp in ElysiumModMenuGUI.forcedPreGameRoles)
-                    { var target = GameData.Instance.GetPlayerById(kvp.Key)?.Object; if (target != null && target.Data.RoleType != kvp.Value) target.RpcSetRole(kvp.Value); }
-                    foreach (byte impId in ElysiumModMenuGUI.forcedImpostors)
-                    { var target = GameData.Instance.GetPlayerById(impId)?.Object; if (target != null && target.Data.Role != null && !target.Data.Role.IsImpostor) target.RpcSetRole(RoleTypes.Impostor); }
+                    foreach (PlayerControl target in PlayerControl.AllPlayerControls)
+                    {
+                        if (target == null || target.Data == null || target.Data.Disconnected) continue;
+                        if (ElysiumModMenuGUI.TryGetForcedRole(target, out RoleTypes role))
+                        {
+                            if (target.Data.RoleType != role) target.RpcSetRole(role);
+                        }
+                        else if (ElysiumModMenuGUI.IsForcedImp(target) && target.Data.Role != null && !target.Data.Role.IsImpostor)
+                            target.RpcSetRole(RoleTypes.Impostor);
+                    }
                 }
 
                 if (!ElysiumModMenuGUI.skipRoleIntroAnim) return true;
@@ -945,11 +951,7 @@ public static void InitializeKillCooldownOnRoundStart()
                     {
                         int numImps = opts.GetInt((Int32OptionNames)1);
                         var impRoleTypes = new HashSet<int> { 1, 5, 9, 18 };
-                        List<byte> allForced = new List<byte>(ElysiumModMenuGUI.forcedImpostors);
-
-                        foreach (var kvp in ElysiumModMenuGUI.forcedPreGameRoles)
-                            if (impRoleTypes.Contains((int)kvp.Value) && !allForced.Contains(kvp.Key))
-                                allForced.Add(kvp.Key);
+                        List<byte> allForced = ElysiumModMenuGUI.GetForcedImpostorPlayerIds();
 
                         if (allForced.Count > 0) numImps = allForced.Count;
                         else
@@ -965,7 +967,7 @@ public static void InitializeKillCooldownOnRoundStart()
                             var targetInfo = players.ToArray().FirstOrDefault(p => p.PlayerId == impId);
                             if (targetInfo == null || targetInfo.Object == null) continue;
 
-                            RoleTypes role = ElysiumModMenuGUI.forcedPreGameRoles.TryGetValue(impId, out RoleTypes forcedRole)
+                            RoleTypes role = ElysiumModMenuGUI.TryGetForcedRole(targetInfo.Object, out RoleTypes forcedRole)
                                 ? forcedRole
                                 : RoleTypes.Impostor;
                             targetInfo.Object.RpcSetRole(role, false);
@@ -993,7 +995,7 @@ public static void InitializeKillCooldownOnRoundStart()
                             if (player == null || player.Object == null) continue;
 
                             RoleTypes role = RoleTypes.Crewmate;
-                            if (ElysiumModMenuGUI.forcedPreGameRoles.TryGetValue(player.PlayerId, out RoleTypes forcedRole) &&
+                            if (ElysiumModMenuGUI.TryGetForcedRole(player.Object, out RoleTypes forcedRole) &&
                                 crewRoleTypes.Contains((int)forcedRole))
                                 role = forcedRole;
 

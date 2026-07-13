@@ -1,7 +1,7 @@
 
 <div align="center">
 
-# Elysium Mod Menu (emm) - Among us
+# Magic Menu (mm) - Among us
 
 **A sleek, client-side mod menu for Among Us.**
 
@@ -16,40 +16,40 @@ Dark IMGUI overlay · QoL & host tools · visuals & ESP · access guard · a ful
 </p>
 
 <p>
-  <a href="https://github.com/Wextikit/ElysiumCore/releases/latest">
-    <img src="https://img.shields.io/github/v/release/Wextikit/ElysiumCore?style=for-the-badge&label=Version&color=8A2BE2" alt="Version">
+  <a href="https://github.com/sunny4554/MagicMenu/releases/latest">
+    <img src="https://img.shields.io/github/v/release/sunny4554/MagicMenu?style=for-the-badge&label=Version&color=8A2BE2" alt="Version">
   </a>
-  <a href="https://github.com/Wextikit/ElysiumCore/stargazers">
-    <img src="https://img.shields.io/github/stars/Wextikit/ElysiumCore?style=for-the-badge&label=Stars&color=ffdd00" alt="Stars">
+  <a href="https://github.com/sunny4554/MagicMenu/stargazers">
+    <img src="https://img.shields.io/github/stars/sunny4554/MagicMenu?style=for-the-badge&label=Stars&color=ffdd00" alt="Stars">
   </a>
 </p>
 
 <br>
 
-<a href="https://github.com/Wextikit/ElysiumCore/releases/latest">
+<a href="https://github.com/sunny4554/MagicMenu/releases/latest">
   <img src="https://img.shields.io/badge/Download-Latest%20Release-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="Download">
 </a>
 <a href="docs/CHANGELOG.md">
   <img src="https://img.shields.io/badge/Changelog-View-0969da?style=for-the-badge" alt="Changelog">
 </a>
-<a href="https://github.com/Wextikit/ElysiumCore/issues">
+<a href="https://github.com/sunny4554/MagicCore/issues">
   <img src="https://img.shields.io/badge/Report-Issue-da3633?style=for-the-badge&logo=github&logoColor=white" alt="Report an issue">
 </a>
 
 <br>
 <br>
 
-<a href="https://discord.gg/C3X8pwAuU5">
-  <img src="https://img.shields.io/badge/Discord-ElysiumCore-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord">
+<a href="https://https://discord.gg/pUPscBzWJV">
+  <img src="https://img.shields.io/badge/Discord-MagicMenu-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord">
 </a>
 
 </div>
 
 > [!CAUTION]
-> This menu includes host, network, spoofing, and moderation tools. Use it only in private or consenting lobbies. Misuse can disrupt games and may result in account or server moderation. Elysium Core is not affiliated with Innersloth.
+> This menu includes host, network, spoofing, and moderation tools. Use it only in private or consenting lobbies. Misuse can disrupt games and may result in account or server moderation. Magic Core is not affiliated with Innersloth.
 ###  1. Install BepInEx IL2CPP
  
- ♯ Elysium Mod Menu is a **BepInEx IL2CPP** mod.
+ ♯ Magic Menu is a **BepInEx IL2CPP** mod.
 Among Us is a Unity IL2CPP game, so the normal Mono version of BepInEx will not work.
 
  ♯ Download BepInEx IL2CPP from one of these sources:
@@ -97,14 +97,14 @@ If you do not see `winhttp.dll`, `dotnet`, and `BepInEx` next to `Among Us.exe`,
 Launch Among Us once after installing BepInEx.
 The first launch may take longer than usual and a console window may appear. This is normal. Once the game reaches the main menu, close it.
 
-### 3. Install Elysium Mod Menu
+### 3. Install Magic Menu
 
-Download `ElysiumModMenu.dll` from the [latest Elysium release](https://github.com/meowchelo/ElysiumModMenu/releases/latest).
+Download `MagicMenu.dll` from the [latest Elysium release](https://github.com/sunny4554/MagicMenu/releases/latest).
 
 Place the file here:
 
 ```
-Among Us/BepInEx/plugins/ElysiumModMenu.dll
+Among Us/BepInEx/plugins/MagicMenu.dll
 ```
 
 If the `plugins` folder does not exist, create it manually inside the `BepInEx` folder.
@@ -113,18 +113,18 @@ If the `plugins` folder does not exist, create it manually inside the `BepInEx` 
 
  ♡ Start Among Us.
 
-Press **Insert** to open Elysium Mod Menu.
+Press **Insert** to open Magic Menu.
 On some keyboards, you may need to press **Fn + Insert** or enable/disable **Num Lock**.
 
 The menu key can be changed later in the menu settings.
 
-### Updating ☾ Elysium Mod Menu
+### Updating ☾ Magic Menu
 
 To update the menu:
 
 1. ♯ Close Among Us.
 
-2. ♯ Download the new `ElysiumModMenu.dll` from the [latest release](https://github.com/meowchelo/ElysiumModMenu/releases/latest).
+2. ♯ Download the new `MagicMenu.dll` from the [latest release](https://github.com/sunny4554/MagicMenu/releases/latest).
 
 3. ♯ Replace the old file in:
 
@@ -165,8 +165,8 @@ Among Us/BepInEx/LogOutput.log
 
 ##  ♡ Community and support
 
-* Join the [ElysiumModMenu Discord](https://discord.gg/DpeWsCqZ) for announcements, help, previews, and community discussion.
-* Use [GitHub Issues](https://github.com/meowchelo/ElysiumModMenu/issues) for reproducible bugs and feature requests.
+* Join the [MagicMenu Discord](https://discord.gg/pUPscBzWJV) for announcements, help, previews, and community discussion.
+* Use [GitHub Issues](https://github.com/sunny4554/MagicMenu/issues) for reproducible bugs and feature requests.
 * When reporting a problem, include the menu version, game platform, what happened, reproduction steps, and the relevant log excerpt.
 * Remove room codes, Friend Codes, PUIDs, chat messages, and personal paths before posting logs publicly.
 
@@ -176,11 +176,11 @@ Among Us/BepInEx/LogOutput.log
 ## ♯ Useful files
 
 ```
-Among Us/ElysiumModMenu/ElysiumModMenu.cfg
-Among Us/ElysiumModMenu/ElysiumModMenuBanList.txt
-Among Us/ElysiumModMenu/ElysiumBotBanList.txt
-Among Us/ElysiumModMenu/ElysiumPlatformBanList.txt
-Among Us/ElysiumModMenu/ElysiumFriendEspIgnore.txt
+Among Us/MagicMenu/MagicMenu.cfg
+Among Us/MagicMenu/MagicMenuBanList.txt
+Among Us/MagicMenu/MagicBotBanList.txt
+Among Us/MagicMenu/MagicPlatformBanList.txt
+Among Us/MagicMenu/MagicFriendEspIgnore.txt
 ```
 
 <details>
@@ -242,7 +242,7 @@ These options are located in the **Menu** tab. Unlock behavior is client-side, m
 ## Disclaimer ❕❕❕
 
 > [!IMPORTANT]
-> Elysium Mod Menu is an independent, unofficial modification. It is not affiliated with, endorsed by, sponsored by, or approved by Innersloth LLC. Among Us, its name, trademarks, and game assets belong to their respective owners.
+> Magic Menu is an independent, unofficial modification. It is not affiliated with, endorsed by, sponsored by, or approved by Innersloth LLC. Among Us, its name, trademarks, and game assets belong to their respective owners.
 
 The software is provided **as-is**, without warranties of functionality, compatibility, availability, security, or fitness for a particular purpose. Game updates may break features or cause crashes.
 

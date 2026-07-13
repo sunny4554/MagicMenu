@@ -39,10 +39,6 @@ Dark IMGUI overlay · QoL & host tools · visuals & ESP · access guard · a ful
 <br>
 <br>
 
-<a href="https://https://discord.gg/pUPscBzWJV">
-  <img src="https://img.shields.io/badge/Discord-MagicMenu-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord">
-</a>
-
 </div>
 
 > [!CAUTION]
@@ -165,7 +161,6 @@ Among Us/BepInEx/LogOutput.log
 
 ##  ♡ Community and support
 
-* Join the [MagicMenu Discord](https://discord.gg/pUPscBzWJV) for announcements, help, previews, and community discussion.
 * Use [GitHub Issues](https://github.com/sunny4554/MagicMenu/issues) for reproducible bugs and feature requests.
 * When reporting a problem, include the menu version, game platform, what happened, reproduction steps, and the relevant log excerpt.
 * Remove room codes, Friend Codes, PUIDs, chat messages, and personal paths before posting logs publicly.

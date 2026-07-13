@@ -99,7 +99,7 @@ The first launch may take longer than usual and a console window may appear. Thi
 
 ### 3. Install Magic Menu
 
-Download `MagicMenu.dll` from the [latest Elysium release](https://github.com/sunny4554/MagicMenu/releases/latest).
+Download `MagicMenu.dll` from the [latest MagicMenu release](https://github.com/sunny4554/MagicMenu/releases/latest).
 
 Place the file here:
 
@@ -189,22 +189,13 @@ Among Us/MagicMenu/MagicFriendEspIgnore.txt
 The project targets .NET 6 and requires local Among Us/BepInEx interop assemblies.
 
 ```
-dotnet build .\ElysiumModMenu.slnx -c Release
+dotnet build .\MagicMenu.slnx -c Release
 ```
 
 </details>
 
-<details>
-<summary><strong>Screenshots</strong></summary>
 
-<!-- Add screenshots here -->
 
-<img width="1919" height="1079" alt="Снимок экрана 2026-06-22 131852" src="https://github.com/user-attachments/assets/e295ce9d-557e-4420-8f57-37f8b79e47b1" />
-<img width="1919" height="1079" alt="Снимок экрана 2026-06-22 131643" src="https://github.com/user-attachments/assets/e1cc97d3-edfb-46d4-9049-0fcd95be5226" />
-<img width="1919" height="1079" alt="Снимок экрана 2026-06-22 131614" src="https://github.com/user-attachments/assets/e9062d61-424a-471f-a739-ec4508858cc0" />
-<img width="1919" height="1079" alt="Снимок экрана 2026-06-22 131538" src="https://github.com/user-attachments/assets/3bf4ade8-96d5-44d8-a3f2-5607f101dc95" />
-
-</details>
 
 <details>
 <summary><strong>Menu function guide</strong></summary>
